@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "dev:codespaces": "concurrently \"npm run dev\" \"npm run dev:frontend\""
   },
   "dependencies": {
     "express": "^4.18.2",

@@ -33,6 +33,7 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0'; // Expose sur toutes les interfaces pour Codespaces
 
 // Configuration de sécurité
 const limiter = rateLimit({
@@ -572,8 +573,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Serveur démarré sur ${HOST}:${PORT}`);
   console.log(`📋 API d'émargement disponible sur http://localhost:${PORT}`);
   console.log(`🔑 Clé API: ${API_KEY}`);
   console.log(`🔒 Mode sécurité: ${process.env.NODE_ENV === 'production' ? 'Production' : 'Développement'}`);

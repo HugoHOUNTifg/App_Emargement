@@ -39,7 +39,7 @@ export function useFormState(): [FormState, (value: FormState | ((val: FormState
     },
     intervenants: [],
     apiConfig: {
-      url: 'http://localhost:3000/api/emargement',
+      url: '/api/emargement',
       key: 'IFG_EMARGEMENT_2025_SECURE_KEY',
     },
   };

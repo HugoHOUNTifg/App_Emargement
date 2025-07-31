@@ -108,6 +108,66 @@
   border-color: var(--error-color);
 }
 
+/* Styles pour les champs de signature */
+.signature-input {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.help-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* Section d'aide */
+.help-section {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.help-section h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-content {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.help-content p {
+  margin: 0 0 0.5rem 0;
+}
+
+.help-content ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.help-content li {
+  margin: 0.25rem 0;
+}
+
+.help-content code {
+  background: #e2e8f0;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+}
+
 /* Boutons */
 .btn {
   padding: 0.75rem 1.5rem;

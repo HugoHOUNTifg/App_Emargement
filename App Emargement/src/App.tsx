@@ -151,6 +151,20 @@ const App: React.FC = () => {
       
       <main className="main-content">
         <div className="form-container">
+          {/* Section d'aide pour les formats d'image */}
+          <div className="help-section">
+            <h3><i className="fas fa-info-circle"></i> Formats d'image supportés</h3>
+            <div className="help-content">
+              <p>Les signatures peuvent être fournies dans les formats suivants :</p>
+              <ul>
+                <li><strong>URL externe</strong> : <code>https://example.com/signature.png</code></li>
+                <li><strong>Base64 avec préfixe</strong> : <code>data:image/png;base64,iVBORw0KGgo...</code></li>
+                <li><strong>Base64 pur</strong> : <code>iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==</code></li>
+              </ul>
+              <p><small>Formats supportés : PNG, JPEG, SVG</small></p>
+            </div>
+          </div>
+          
           <div className="form-section">
             <h2><i className="fas fa-user"></i> Informations du Participant</h2>
             <div className="form-grid">
@@ -220,24 +234,32 @@ const App: React.FC = () => {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="signature_matin">Signature Matin (URL)</label>
-                <input
-                  type="url"
+                <label htmlFor="signature_matin">Signature Matin (URL ou Base64)</label>
+                <textarea
                   id="signature_matin"
                   value={formState.participant.signature_matin}
                   onChange={(e) => updateParticipant('signature_matin', e.target.value)}
-                  placeholder="https://example.com/signature1.png"
+                  placeholder="URL: https://example.com/signature1.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
+                  rows={3}
+                  className="signature-input"
                 />
+                <small className="help-text">
+                  Formats supportés : URL, Base64 avec préfixe, Base64 pur
+                </small>
               </div>
               <div className="form-group">
-                <label htmlFor="signature_soir">Signature Soir (URL)</label>
-                <input
-                  type="url"
+                <label htmlFor="signature_soir">Signature Soir (URL ou Base64)</label>
+                <textarea
                   id="signature_soir"
                   value={formState.participant.signature_soir}
                   onChange={(e) => updateParticipant('signature_soir', e.target.value)}
-                  placeholder="https://example.com/signature2.png"
+                  placeholder="URL: https://example.com/signature2.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
+                  rows={3}
+                  className="signature-input"
                 />
+                <small className="help-text">
+                  Formats supportés : URL, Base64 avec préfixe, Base64 pur
+                </small>
               </div>
             </div>
           </div>
@@ -287,22 +309,30 @@ const App: React.FC = () => {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Signature Matin (URL)</label>
-                        <input
-                          type="url"
-                          placeholder="https://example.com/signature.png"
+                        <label>Signature Matin (URL ou Base64)</label>
+                        <textarea
+                          placeholder="URL: https://example.com/signature.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
                           value={intervenant.signature_matin}
                           onChange={(e) => updateIntervenant(intervenant.id, 'signature_matin', e.target.value)}
+                          rows={3}
+                          className="signature-input"
                         />
+                        <small className="help-text">
+                          Formats supportés : URL, Base64 avec préfixe, Base64 pur
+                        </small>
                       </div>
                       <div className="form-group">
-                        <label>Signature Soir (URL)</label>
-                        <input
-                          type="url"
-                          placeholder="https://example.com/signature.png"
+                        <label>Signature Soir (URL ou Base64)</label>
+                        <textarea
+                          placeholder="URL: https://example.com/signature.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
                           value={intervenant.signature_soir}
                           onChange={(e) => updateIntervenant(intervenant.id, 'signature_soir', e.target.value)}
+                          rows={3}
+                          className="signature-input"
                         />
+                        <small className="help-text">
+                          Formats supportés : URL, Base64 avec préfixe, Base64 pur
+                        </small>
                       </div>
                     </div>
                   </div>

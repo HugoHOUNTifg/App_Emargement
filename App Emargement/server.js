@@ -156,8 +156,8 @@ const isValidUrl = (string) => {
  * Validation des données d'image (URLs ou base64)
  * 
  * Cette fonction valide :
- * - URLs HTTP/HTTPS
- * - Données base64 avec préfixe data:image/
+ * - URLs HTTP/HTTPS (PNG, JPEG, SVG)
+ * - Données base64 avec préfixe data:image/ (PNG, JPEG, SVG)
  * - Données base64 pures (longueur > 100 caractères)
  * 
  * @param {string} imageData - Données d'image à valider
@@ -172,7 +172,14 @@ const isValidImageData = (imageData) => {
   // Base64 avec préfixe data:image/
   if (imageData.startsWith('data:image/')) {
     const parts = imageData.split(',');
-    return parts.length === 2 && parts[1].length > 0;
+    if (parts.length !== 2 || !parts[1]) {
+      return false;
+    }
+    
+    // Vérifier le type MIME (PNG, JPEG, SVG)
+    const mimeType = imageData.split(';')[0].split(':')[1];
+    const supportedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    return supportedTypes.includes(mimeType);
   }
   
   // Base64 pur (longueur > 100 et pas d'espaces)

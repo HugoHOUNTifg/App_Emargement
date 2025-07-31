@@ -11,6 +11,10 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiService] = useState(() => new ApiService(formState.apiConfig));
+  const [signatureFormats, setSignatureFormats] = useState<{[key: string]: string}>({
+    matin: 'url',
+    soir: 'url'
+  });
 
   const addNotification = (notification: Omit<NotificationType, 'id'>) => {
     const id = Date.now().toString();
@@ -73,6 +77,69 @@ const App: React.FC = () => {
       ...prev,
       intervenants: prev.intervenants.filter(i => i.id !== id)
     }));
+  };
+
+  // Fonctions pour gérer les formats de signature
+  const getSignatureFormat = (type: string) => {
+    return signatureFormats[type] || 'url';
+  };
+
+  const setSignatureFormat = (type: string, format: string) => {
+    setSignatureFormats(prev => ({
+      ...prev,
+      [type]: format
+    }));
+    
+    // Réinitialiser la valeur si on change de format
+    if (format !== getSignatureFormat(type)) {
+      const field = type === 'matin' ? 'signature_matin' : 'signature_soir';
+      updateParticipant(field, '');
+    }
+  };
+
+  // Fonction pour gérer l'upload de fichiers
+  const handleFileUpload = (type: string, file: File | undefined) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      const field = type === 'matin' ? 'signature_matin' : 'signature_soir';
+      updateParticipant(field, result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Fonctions pour gérer les formats de signature des intervenants
+  const getIntervenantSignatureFormat = (id: number, type: string) => {
+    const key = `intervenant-${id}-${type}`;
+    return signatureFormats[key] || 'url';
+  };
+
+  const setIntervenantSignatureFormat = (id: number, type: string, format: string) => {
+    const key = `intervenant-${id}-${type}`;
+    setSignatureFormats(prev => ({
+      ...prev,
+      [key]: format
+    }));
+    
+    // Réinitialiser la valeur si on change de format
+    if (format !== getIntervenantSignatureFormat(id, type)) {
+      const field = type === 'matin' ? 'signature_matin' : 'signature_soir';
+      updateIntervenant(id, field, '');
+    }
+  };
+
+  const handleIntervenantFileUpload = (id: number, type: string, file: File | undefined) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      const field = type === 'matin' ? 'signature_matin' : 'signature_soir';
+      updateIntervenant(id, field, result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const generatePdf = async () => {
@@ -160,8 +227,9 @@ const App: React.FC = () => {
                 <li><strong>URL externe</strong> : <code>https://example.com/signature.png</code></li>
                 <li><strong>Base64 avec préfixe</strong> : <code>data:image/png;base64,iVBORw0KGgo...</code></li>
                 <li><strong>Base64 pur</strong> : <code>iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==</code></li>
+                <li><strong>Fichier local</strong> : Upload direct de fichiers image</li>
               </ul>
-              <p><small>Formats supportés : PNG, JPEG, SVG</small></p>
+              <p><strong>Formats d'image supportés :</strong> PNG, JPEG, SVG</p>
             </div>
           </div>
           
@@ -234,32 +302,129 @@ const App: React.FC = () => {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="signature_matin">Signature Matin (URL ou Base64)</label>
-                <textarea
-                  id="signature_matin"
-                  value={formState.participant.signature_matin}
-                  onChange={(e) => updateParticipant('signature_matin', e.target.value)}
-                  placeholder="URL: https://example.com/signature1.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
-                  rows={3}
-                  className="signature-input"
-                />
-                <small className="help-text">
-                  Formats supportés : URL, Base64 avec préfixe, Base64 pur
-                </small>
+                <label htmlFor="signature_matin">Signature Matin</label>
+                <div className="signature-upload-container">
+                  <select 
+                    className="format-selector"
+                    onChange={(e) => setSignatureFormat('matin', e.target.value)}
+                    value={getSignatureFormat('matin')}
+                  >
+                    <option value="url">URL externe</option>
+                    <option value="base64">Base64</option>
+                    <option value="file">Fichier local</option>
+                  </select>
+                  
+                  {getSignatureFormat('matin') === 'url' && (
+                    <input
+                      type="url"
+                      placeholder="https://example.com/signature1.png"
+                      value={formState.participant.signature_matin}
+                      onChange={(e) => updateParticipant('signature_matin', e.target.value)}
+                      className="signature-input"
+                    />
+                  )}
+                  
+                  {getSignatureFormat('matin') === 'base64' && (
+                    <textarea
+                      placeholder="data:image/png;base64,iVBORw0KGgo... ou base64 pur (PNG, JPEG, SVG)"
+                      value={formState.participant.signature_matin}
+                      onChange={(e) => updateParticipant('signature_matin', e.target.value)}
+                      rows={3}
+                      className="signature-input"
+                    />
+                  )}
+                  
+                  {getSignatureFormat('matin') === 'file' && (
+                    <div className="file-upload-container">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload('matin', e.target.files?.[0])}
+                        className="file-input"
+                        id="file-matin"
+                      />
+                      <label htmlFor="file-matin" className="file-upload-label">
+                        <i className="fas fa-upload"></i>
+                        Choisir un fichier image
+                      </label>
+                      {formState.participant.signature_matin && (
+                        <div className="file-preview">
+                          <img src={formState.participant.signature_matin} alt="Aperçu" />
+                          <button 
+                            type="button" 
+                            onClick={() => updateParticipant('signature_matin', '')}
+                            className="remove-file"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+              
               <div className="form-group">
-                <label htmlFor="signature_soir">Signature Soir (URL ou Base64)</label>
-                <textarea
-                  id="signature_soir"
-                  value={formState.participant.signature_soir}
-                  onChange={(e) => updateParticipant('signature_soir', e.target.value)}
-                  placeholder="URL: https://example.com/signature2.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
-                  rows={3}
-                  className="signature-input"
-                />
-                <small className="help-text">
-                  Formats supportés : URL, Base64 avec préfixe, Base64 pur
-                </small>
+                <label htmlFor="signature_soir">Signature Soir</label>
+                <div className="signature-upload-container">
+                  <select 
+                    className="format-selector"
+                    onChange={(e) => setSignatureFormat('soir', e.target.value)}
+                    value={getSignatureFormat('soir')}
+                  >
+                    <option value="url">URL externe</option>
+                    <option value="base64">Base64</option>
+                    <option value="file">Fichier local</option>
+                  </select>
+                  
+                  {getSignatureFormat('soir') === 'url' && (
+                    <input
+                      type="url"
+                      placeholder="https://example.com/signature2.png"
+                      value={formState.participant.signature_soir}
+                      onChange={(e) => updateParticipant('signature_soir', e.target.value)}
+                      className="signature-input"
+                    />
+                  )}
+                  
+                  {getSignatureFormat('soir') === 'base64' && (
+                    <textarea
+                      placeholder="data:image/png;base64,iVBORw0KGgo... ou base64 pur (PNG, JPEG, SVG)"
+                      value={formState.participant.signature_soir}
+                      onChange={(e) => updateParticipant('signature_soir', e.target.value)}
+                      rows={3}
+                      className="signature-input"
+                    />
+                  )}
+                  
+                  {getSignatureFormat('soir') === 'file' && (
+                    <div className="file-upload-container">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload('soir', e.target.files?.[0])}
+                        className="file-input"
+                        id="file-soir"
+                      />
+                      <label htmlFor="file-soir" className="file-upload-label">
+                        <i className="fas fa-upload"></i>
+                        Choisir un fichier image
+                      </label>
+                      {formState.participant.signature_soir && (
+                        <div className="file-preview">
+                          <img src={formState.participant.signature_soir} alt="Aperçu" />
+                          <button 
+                            type="button" 
+                            onClick={() => updateParticipant('signature_soir', '')}
+                            className="remove-file"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -309,30 +474,129 @@ const App: React.FC = () => {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Signature Matin (URL ou Base64)</label>
-                        <textarea
-                          placeholder="URL: https://example.com/signature.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
-                          value={intervenant.signature_matin}
-                          onChange={(e) => updateIntervenant(intervenant.id, 'signature_matin', e.target.value)}
-                          rows={3}
-                          className="signature-input"
-                        />
-                        <small className="help-text">
-                          Formats supportés : URL, Base64 avec préfixe, Base64 pur
-                        </small>
+                        <label>Signature Matin</label>
+                        <div className="signature-upload-container">
+                          <select 
+                            className="format-selector"
+                            onChange={(e) => setIntervenantSignatureFormat(intervenant.id, 'matin', e.target.value)}
+                            value={getIntervenantSignatureFormat(intervenant.id, 'matin')}
+                          >
+                            <option value="url">URL externe</option>
+                            <option value="base64">Base64</option>
+                            <option value="file">Fichier local</option>
+                          </select>
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'matin') === 'url' && (
+                            <input
+                              type="url"
+                              placeholder="https://example.com/signature.png"
+                              value={intervenant.signature_matin}
+                              onChange={(e) => updateIntervenant(intervenant.id, 'signature_matin', e.target.value)}
+                              className="signature-input"
+                            />
+                          )}
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'matin') === 'base64' && (
+                            <textarea
+                              placeholder="data:image/png;base64,iVBORw0KGgo... ou base64 pur (PNG, JPEG, SVG)"
+                              value={intervenant.signature_matin}
+                              onChange={(e) => updateIntervenant(intervenant.id, 'signature_matin', e.target.value)}
+                              rows={3}
+                              className="signature-input"
+                            />
+                          )}
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'matin') === 'file' && (
+                            <div className="file-upload-container">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleIntervenantFileUpload(intervenant.id, 'matin', e.target.files?.[0])}
+                                className="file-input"
+                                id={`file-matin-${intervenant.id}`}
+                              />
+                              <label htmlFor={`file-matin-${intervenant.id}`} className="file-upload-label">
+                                <i className="fas fa-upload"></i>
+                                Choisir un fichier image
+                              </label>
+                              {intervenant.signature_matin && (
+                                <div className="file-preview">
+                                  <img src={intervenant.signature_matin} alt="Aperçu" />
+                                  <button 
+                                    type="button" 
+                                    onClick={() => updateIntervenant(intervenant.id, 'signature_matin', '')}
+                                    className="remove-file"
+                                  >
+                                    <i className="fas fa-times"></i>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      
                       <div className="form-group">
-                        <label>Signature Soir (URL ou Base64)</label>
-                        <textarea
-                          placeholder="URL: https://example.com/signature.png&#10;Base64: data:image/png;base64,iVBORw0KGgo...&#10;Base64 pur: iVBORw0KGgoAAAANSUhEUg..."
-                          value={intervenant.signature_soir}
-                          onChange={(e) => updateIntervenant(intervenant.id, 'signature_soir', e.target.value)}
-                          rows={3}
-                          className="signature-input"
-                        />
-                        <small className="help-text">
-                          Formats supportés : URL, Base64 avec préfixe, Base64 pur
-                        </small>
+                        <label>Signature Soir</label>
+                        <div className="signature-upload-container">
+                          <select 
+                            className="format-selector"
+                            onChange={(e) => setIntervenantSignatureFormat(intervenant.id, 'soir', e.target.value)}
+                            value={getIntervenantSignatureFormat(intervenant.id, 'soir')}
+                          >
+                            <option value="url">URL externe</option>
+                            <option value="base64">Base64</option>
+                            <option value="file">Fichier local</option>
+                          </select>
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'soir') === 'url' && (
+                            <input
+                              type="url"
+                              placeholder="https://example.com/signature.png"
+                              value={intervenant.signature_soir}
+                              onChange={(e) => updateIntervenant(intervenant.id, 'signature_soir', e.target.value)}
+                              className="signature-input"
+                            />
+                          )}
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'soir') === 'base64' && (
+                            <textarea
+                              placeholder="data:image/png;base64,iVBORw0KGgo... ou base64 pur (PNG, JPEG, SVG)"
+                              value={intervenant.signature_soir}
+                              onChange={(e) => updateIntervenant(intervenant.id, 'signature_soir', e.target.value)}
+                              rows={3}
+                              className="signature-input"
+                            />
+                          )}
+                          
+                          {getIntervenantSignatureFormat(intervenant.id, 'soir') === 'file' && (
+                            <div className="file-upload-container">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleIntervenantFileUpload(intervenant.id, 'soir', e.target.files?.[0])}
+                                className="file-input"
+                                id={`file-soir-${intervenant.id}`}
+                              />
+                              <label htmlFor={`file-soir-${intervenant.id}`} className="file-upload-label">
+                                <i className="fas fa-upload"></i>
+                                Choisir un fichier image
+                              </label>
+                              {intervenant.signature_soir && (
+                                <div className="file-preview">
+                                  <img src={intervenant.signature_soir} alt="Aperçu" />
+                                  <button 
+                                    type="button" 
+                                    onClick={() => updateIntervenant(intervenant.id, 'signature_soir', '')}
+                                    className="remove-file"
+                                  >
+                                    <i className="fas fa-times"></i>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

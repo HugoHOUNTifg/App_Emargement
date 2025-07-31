@@ -8,10 +8,12 @@
 - **URLs HTTP/HTTPS** : Support des images depuis des URLs externes (PNG, JPEG, SVG)
 - **Données base64** : Support des images encodées en base64 avec préfixe `data:image/`
 - **Base64 pur** : Support des données base64 sans préfixe (longueur > 100 caractères)
+- **Fichiers locaux** : Upload direct de fichiers image (PNG, JPEG, SVG)
+- **Validation des types MIME** : Vérification stricte des formats supportés
 - **Gestion d'erreurs robuste** : En cas d'échec, un placeholder est affiché
 - **Support pour participants et intervenants** : Les signatures sont gérées pour tous les types d'utilisateurs
 - **Timeouts configurés** : 10 secondes de timeout pour les URLs externes
-- **Validation intelligente** : Détection automatique du format d'image (URL ou base64)
+- **Validation intelligente** : Détection automatique du format d'image
 
 #### Configuration réseau améliorée
 - **CORS élargi** : Configuration pour permettre les accès réseau externes
@@ -86,7 +88,9 @@
 - **URLs externes** : `https://via.placeholder.com/200x100/000000/FFFFFF?text=Signature`
 - **Base64 avec préfixe** : `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`
 - **Base64 pur** : `iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`
+- **Fichiers locaux** : Upload direct de fichiers image
 - **Formats supportés** : PNG, JPEG, SVG
+- **Validation MIME** : Vérification stricte des types d'image
 
 ### 🔄 Prochaines étapes
 

@@ -46,19 +46,28 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Middleware de sécurité
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+// Middleware de sécurité - CSP désactivé en développement
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", "http://localhost:3000", "https://localhost:3000", "http://localhost:3001", "https://localhost:3001"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+        fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:", "http:"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,
-}));
+    crossOriginEmbedderPolicy: false,
+  }));
+} else {
+  // En développement, utiliser helmet sans CSP restrictif
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
+}
 
 /**
  * Configuration CORS élargie pour permettre les accès réseau
@@ -216,14 +225,23 @@ async function getImageData(imageData) {
       const axios = require('axios');
       const response = await axios.get(imageData, {
         responseType: 'arraybuffer',
-        timeout: 10000, // 10 secondes de timeout
+        timeout: 15000, // 15 secondes de timeout (augmenté)
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+          'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        validateStatus: function (status) {
+          return status >= 200 && status < 300; // Accepter seulement les codes 2xx
         }
       });
       return response.data;
     } catch (error) {
       console.warn(`Impossible de télécharger l'image depuis l'URL: ${imageData}`, error.message);
+      // Retourner null pour afficher un placeholder au lieu de faire échouer le PDF
       return null;
     }
   }

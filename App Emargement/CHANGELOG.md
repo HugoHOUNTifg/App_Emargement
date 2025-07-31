@@ -4,11 +4,14 @@
 
 ### 🚀 Nouvelles fonctionnalités
 
-#### Téléchargement d'images de signature
-- **Ajout du support des URLs de signature** : L'application peut maintenant télécharger des images de signature depuis des URLs externes
-- **Gestion d'erreurs robuste** : En cas d'échec de téléchargement, un placeholder est affiché
+#### Support multi-formats pour les images de signature
+- **URLs HTTP/HTTPS** : Support des images depuis des URLs externes (PNG, JPEG, SVG)
+- **Données base64** : Support des images encodées en base64 avec préfixe `data:image/`
+- **Base64 pur** : Support des données base64 sans préfixe (longueur > 100 caractères)
+- **Gestion d'erreurs robuste** : En cas d'échec, un placeholder est affiché
 - **Support pour participants et intervenants** : Les signatures sont gérées pour tous les types d'utilisateurs
-- **Timeouts configurés** : 10 secondes de timeout pour éviter les blocages
+- **Timeouts configurés** : 10 secondes de timeout pour les URLs externes
+- **Validation intelligente** : Détection automatique du format d'image (URL ou base64)
 
 #### Configuration réseau améliorée
 - **CORS élargi** : Configuration pour permettre les accès réseau externes
@@ -18,7 +21,8 @@
 ### 🔧 Modifications techniques
 
 #### Serveur (`server.js`)
-- Ajout de la fonction `downloadImage()` pour télécharger les images
+- Remplacement de `downloadImage()` par `getImageData()` pour supporter multi-formats
+- Ajout de `isValidImageData()` pour la validation des formats d'image
 - Modification de `generateEmargementPDF()` pour supporter les images asynchrones
 - Amélioration de la gestion d'erreurs avec des placeholders
 - Configuration CORS élargie pour le développement
@@ -54,14 +58,14 @@
 
 ### 🎯 Utilisation
 
-#### Exemple de données avec signatures
+#### Exemple de données avec signatures multi-formats
 ```json
 {
   "participant": {
     "nom": "Dupont",
     "prenom": "Jean",
     "signature_matin": "https://example.com/signature1.png",
-    "signature_soir": "https://example.com/signature2.png",
+    "signature_soir": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
     "code_session": "SESS001",
     "date_du_cours": "15/01/2025",
     "nom_formation": "Formation Test",
@@ -71,16 +75,18 @@
     {
       "nom": "Martin",
       "prenom": "Sophie",
-      "signature_matin": "https://example.com/signature3.png",
-      "signature_soir": "https://example.com/signature4.png"
+      "signature_matin": "https://via.placeholder.com/200x100/000000/FFFFFF?text=Signature",
+      "signature_soir": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
     }
   ]
 }
 ```
 
-#### URLs de test recommandées
-- `https://via.placeholder.com/200x100/000000/FFFFFF?text=Signature`
-- `https://picsum.photos/200/100` (images aléatoires)
+#### Formats d'image supportés
+- **URLs externes** : `https://via.placeholder.com/200x100/000000/FFFFFF?text=Signature`
+- **Base64 avec préfixe** : `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`
+- **Base64 pur** : `iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`
+- **Formats supportés** : PNG, JPEG, SVG
 
 ### 🔄 Prochaines étapes
 

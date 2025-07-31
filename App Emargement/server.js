@@ -104,12 +104,12 @@ const validateParticipant = (participant) => {
     throw new Error('Format de date invalide. Utilisez JJ/MM/AAAA');
   }
 
-  // Validation des URLs de signature (optionnelles)
-  if (participant.signature_matin && !isValidUrl(participant.signature_matin)) {
-    throw new Error('URL de signature matin invalide');
+  // Validation des signatures (optionnelles) - URLs ou base64
+  if (participant.signature_matin && !isValidImageData(participant.signature_matin)) {
+    throw new Error('Format de signature matin invalide (URL ou base64 requis)');
   }
-  if (participant.signature_soir && !isValidUrl(participant.signature_soir)) {
-    throw new Error('URL de signature soir invalide');
+  if (participant.signature_soir && !isValidImageData(participant.signature_soir)) {
+    throw new Error('Format de signature soir invalide (URL ou base64 requis)');
   }
 
   return true;
@@ -129,17 +129,20 @@ const validateIntervenants = (intervenants) => {
       throw new Error(`Intervenant ${index + 1}: nom et prénom requis`);
     }
 
-    if (intervenant.signature_matin && !isValidUrl(intervenant.signature_matin)) {
-      throw new Error(`Intervenant ${index + 1}: URL de signature matin invalide`);
+    if (intervenant.signature_matin && !isValidImageData(intervenant.signature_matin)) {
+      throw new Error(`Intervenant ${index + 1}: format de signature matin invalide (URL ou base64 requis)`);
     }
-    if (intervenant.signature_soir && !isValidUrl(intervenant.signature_soir)) {
-      throw new Error(`Intervenant ${index + 1}: URL de signature soir invalide`);
+    if (intervenant.signature_soir && !isValidImageData(intervenant.signature_soir)) {
+      throw new Error(`Intervenant ${index + 1}: format de signature soir invalide (URL ou base64 requis)`);
     }
   });
 
   return true;
 };
 
+/**
+ * Validation des URLs (pour compatibilité)
+ */
 const isValidUrl = (string) => {
   try {
     const url = new URL(string);
@@ -150,32 +153,107 @@ const isValidUrl = (string) => {
 };
 
 /**
- * Fonction pour télécharger les images de signature depuis des URLs externes
+ * Validation des données d'image (URLs ou base64)
  * 
- * Cette fonction :
- * - Télécharge les images depuis des URLs HTTP/HTTPS
- * - Gère les timeouts (10 secondes)
- * - Utilise un User-Agent pour éviter les blocages
+ * Cette fonction valide :
+ * - URLs HTTP/HTTPS
+ * - Données base64 avec préfixe data:image/
+ * - Données base64 pures (longueur > 100 caractères)
+ * 
+ * @param {string} imageData - Données d'image à valider
+ * @returns {boolean} - True si le format est valide
+ */
+const isValidImageData = (imageData) => {
+  // URLs HTTP/HTTPS
+  if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+    return isValidUrl(imageData);
+  }
+  
+  // Base64 avec préfixe data:image/
+  if (imageData.startsWith('data:image/')) {
+    const parts = imageData.split(',');
+    return parts.length === 2 && parts[1].length > 0;
+  }
+  
+  // Base64 pur (longueur > 100 et pas d'espaces)
+  if (imageData.length > 100 && !imageData.includes(' ')) {
+    try {
+      // Test de décodage base64
+      Buffer.from(imageData, 'base64');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  
+  return false;
+};
+
+/**
+ * Fonction pour récupérer les images de signature depuis différentes sources
+ * 
+ * Cette fonction supporte :
+ * - URLs HTTP/HTTPS (PNG, JPEG, SVG)
+ * - Données base64 (PNG, JPEG, SVG)
+ * - Gestion des timeouts (10 secondes pour les URLs)
+ * - User-Agent personnalisé pour éviter les blocages
  * - Retourne null en cas d'erreur (pour afficher un placeholder)
  * 
- * @param {string} url - URL de l'image à télécharger
+ * @param {string} imageData - URL ou données base64 de l'image
  * @returns {Buffer|null} - Buffer de l'image ou null si erreur
  */
-async function downloadImage(url) {
-  try {
-    const axios = require('axios');
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
-      timeout: 10000, // 10 secondes de timeout
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.warn(`Impossible de télécharger l'image: ${url}`, error.message);
-    return null; // Retourne null pour afficher un placeholder
+async function getImageData(imageData) {
+  // Si c'est une URL (commence par http:// ou https://)
+  if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+    try {
+      const axios = require('axios');
+      const response = await axios.get(imageData, {
+        responseType: 'arraybuffer',
+        timeout: 10000, // 10 secondes de timeout
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.warn(`Impossible de télécharger l'image depuis l'URL: ${imageData}`, error.message);
+      return null;
+    }
   }
+  
+  // Si c'est du base64
+  if (imageData.startsWith('data:image/')) {
+    try {
+      // Extraire les données base64
+      const base64Data = imageData.split(',')[1];
+      if (!base64Data) {
+        console.warn('Format base64 invalide: données manquantes');
+        return null;
+      }
+      
+      // Convertir base64 en Buffer
+      const buffer = Buffer.from(base64Data, 'base64');
+      return buffer;
+    } catch (error) {
+      console.warn('Erreur lors du décodage base64:', error.message);
+      return null;
+    }
+  }
+  
+  // Si c'est du base64 pur (sans préfixe data:)
+  if (imageData.length > 100 && !imageData.includes(' ')) {
+    try {
+      // Essayer de décoder comme base64 pur
+      const buffer = Buffer.from(imageData, 'base64');
+      return buffer;
+    } catch (error) {
+      console.warn('Format base64 invalide:', error.message);
+      return null;
+    }
+  }
+  
+  console.warn('Format d\'image non reconnu:', imageData.substring(0, 50) + '...');
+  return null;
 }
 
 // Middleware de vérification de la clé API
@@ -268,39 +346,39 @@ async function generateEmargementPDF(data) {
       doc.text(data.participant.prenom, 150, currentY);
       
       // Gestion des signatures du participant - Matin
-      // Télécharge et insère l'image de signature ou affiche un placeholder
+      // Récupère et insère l'image de signature ou affiche un placeholder
       if (data.participant.signature_matin) {
         try {
-          const imageBuffer = await downloadImage(data.participant.signature_matin);
+          const imageBuffer = await getImageData(data.participant.signature_matin);
           if (imageBuffer) {
             doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
           } else {
             doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
           }
         } catch (error) {
-          console.warn('Erreur lors du téléchargement de la signature matin:', error.message);
+          console.warn('Erreur lors de la récupération de la signature matin:', error.message);
           doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
         }
       } else {
-        doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
+        doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
       }
       
       // Gestion des signatures du participant - Soir
-      // Télécharge et insère l'image de signature ou affiche un placeholder
+      // Récupère et insère l'image de signature ou affiche un placeholder
       if (data.participant.signature_soir) {
         try {
-          const imageBuffer = await downloadImage(data.participant.signature_soir);
+          const imageBuffer = await getImageData(data.participant.signature_soir);
           if (imageBuffer) {
             doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
           } else {
             doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
           }
         } catch (error) {
-          console.warn('Erreur lors du téléchargement de la signature soir:', error.message);
+          console.warn('Erreur lors de la récupération de la signature soir:', error.message);
           doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
         }
       } else {
-        doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
+        doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
       }
       
       // Intervenants
@@ -312,39 +390,39 @@ async function generateEmargementPDF(data) {
           doc.text(intervenant.prenom, 150, currentY);
           
           // Gestion des signatures des intervenants - Matin
-          // Télécharge et insère l'image de signature ou affiche un placeholder
+          // Récupère et insère l'image de signature ou affiche un placeholder
           if (intervenant.signature_matin) {
             try {
-              const imageBuffer = await downloadImage(intervenant.signature_matin);
+              const imageBuffer = await getImageData(intervenant.signature_matin);
               if (imageBuffer) {
                 doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
               } else {
                 doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
               }
             } catch (error) {
-              console.warn(`Erreur lors du téléchargement de la signature matin de l'intervenant ${i + 1}:`, error.message);
+              console.warn(`Erreur lors de la récupération de la signature matin de l'intervenant ${i + 1}:`, error.message);
               doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
             }
           } else {
-            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
+            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
           }
           
           // Gestion des signatures des intervenants - Soir
-          // Télécharge et insère l'image de signature ou affiche un placeholder
+          // Récupère et insère l'image de signature ou affiche un placeholder
           if (intervenant.signature_soir) {
             try {
-              const imageBuffer = await downloadImage(intervenant.signature_soir);
+              const imageBuffer = await getImageData(intervenant.signature_soir);
               if (imageBuffer) {
                 doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
               } else {
                 doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
               }
             } catch (error) {
-              console.warn(`Erreur lors du téléchargement de la signature soir de l'intervenant ${i + 1}:`, error.message);
+              console.warn(`Erreur lors de la récupération de la signature soir de l'intervenant ${i + 1}:`, error.message);
               doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
             }
           } else {
-            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
+            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
           }
         }
       }

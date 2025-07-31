@@ -37,10 +37,10 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  origin: '*', // Permettre toutes les origines
   credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'x-api-key']
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization']
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -115,6 +115,24 @@ const isValidUrl = (string) => {
   }
 };
 
+// Fonction pour télécharger les images de signature
+async function downloadImage(url) {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.warn(`Impossible de télécharger l'image: ${url}`, error.message);
+    return null;
+  }
+}
+
 // Middleware de vérification de la clé API
 const verifyApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
@@ -130,8 +148,8 @@ const verifyApiKey = (req, res, next) => {
 };
 
 // Fonction pour générer la feuille d'émargement
-function generateEmargementPDF(data) {
-  return new Promise((resolve, reject) => {
+async function generateEmargementPDF(data) {
+  return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: 'A4',
@@ -192,21 +210,80 @@ function generateEmargementPDF(data) {
       doc.text(data.participant.nom, 50, currentY);
       doc.text(data.participant.prenom, 150, currentY);
       
-      // Placeholder pour les signatures
-      doc.rect(250, currentY - 5, 80, 20).stroke();
-      doc.rect(350, currentY - 5, 80, 20).stroke();
+      // Gestion des signatures du participant
+      if (data.participant.signature_matin) {
+        try {
+          const imageBuffer = await downloadImage(data.participant.signature_matin);
+          if (imageBuffer) {
+            doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
+          } else {
+            doc.rect(250, currentY - 5, 80, 20).stroke();
+          }
+        } catch (error) {
+          console.warn('Erreur lors du téléchargement de la signature matin:', error.message);
+          doc.rect(250, currentY - 5, 80, 20).stroke();
+        }
+      } else {
+        doc.rect(250, currentY - 5, 80, 20).stroke();
+      }
+      
+      if (data.participant.signature_soir) {
+        try {
+          const imageBuffer = await downloadImage(data.participant.signature_soir);
+          if (imageBuffer) {
+            doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
+          } else {
+            doc.rect(350, currentY - 5, 80, 20).stroke();
+          }
+        } catch (error) {
+          console.warn('Erreur lors du téléchargement de la signature soir:', error.message);
+          doc.rect(350, currentY - 5, 80, 20).stroke();
+        }
+      } else {
+        doc.rect(350, currentY - 5, 80, 20).stroke();
+      }
       
       // Intervenants
       if (data.intervenants && data.intervenants.length > 0) {
-        data.intervenants.forEach((intervenant, index) => {
+        for (let i = 0; i < data.intervenants.length; i++) {
+          const intervenant = data.intervenants[i];
           currentY += rowHeight;
           doc.text(intervenant.nom, 50, currentY);
           doc.text(intervenant.prenom, 150, currentY);
           
-          // Placeholder pour les signatures
-          doc.rect(250, currentY - 5, 80, 20).stroke();
-          doc.rect(350, currentY - 5, 80, 20).stroke();
-        });
+          // Gestion des signatures des intervenants
+          if (intervenant.signature_matin) {
+            try {
+              const imageBuffer = await downloadImage(intervenant.signature_matin);
+              if (imageBuffer) {
+                doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
+              } else {
+                doc.rect(250, currentY - 5, 80, 20).stroke();
+              }
+            } catch (error) {
+              console.warn(`Erreur lors du téléchargement de la signature matin de l'intervenant ${i + 1}:`, error.message);
+              doc.rect(250, currentY - 5, 80, 20).stroke();
+            }
+          } else {
+            doc.rect(250, currentY - 5, 80, 20).stroke();
+          }
+          
+          if (intervenant.signature_soir) {
+            try {
+              const imageBuffer = await downloadImage(intervenant.signature_soir);
+              if (imageBuffer) {
+                doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
+              } else {
+                doc.rect(350, currentY - 5, 80, 20).stroke();
+              }
+            } catch (error) {
+              console.warn(`Erreur lors du téléchargement de la signature soir de l'intervenant ${i + 1}:`, error.message);
+              doc.rect(350, currentY - 5, 80, 20).stroke();
+            }
+          } else {
+            doc.rect(350, currentY - 5, 80, 20).stroke();
+          }
+        }
       }
 
       // Pied de page

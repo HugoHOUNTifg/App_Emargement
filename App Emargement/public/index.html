@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Feuille d'Émargement</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <i class="fas fa-file-signature header-icon"></i>
+                <h1>Générateur de Feuille d'Émargement</h1>
+                <p>Créez vos feuilles d'émargement en quelques clics</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="form-container">
+                <div class="form-section">
+                    <h2><i class="fas fa-user"></i> Informations du Participant</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nom">Nom *</label>
+                            <input type="text" id="nom" placeholder="Nom du participant" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prenom">Prénom *</label>
+                            <input type="text" id="prenom" placeholder="Prénom du participant" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="code_session">Code Session *</label>
+                            <input type="text" id="code_session" placeholder="Ex: SESS-2025-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_cours">Date du Cours *</label>
+                            <input type="date" id="date_cours" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nom_formation">Nom de la Formation *</label>
+                            <input type="text" id="nom_formation" placeholder="Ex: Formation Développement Web" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nom_cours">Nom du Cours *</label>
+                            <input type="text" id="nom_cours" placeholder="Ex: JavaScript Avancé" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signature_matin">Signature Matin (URL)</label>
+                            <input type="url" id="signature_matin" placeholder="https://example.com/signature1.png">
+                        </div>
+                        <div class="form-group">
+                            <label for="signature_soir">Signature Soir (URL)</label>
+                            <input type="url" id="signature_soir" placeholder="https://example.com/signature2.png">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-users"></i> Intervenants</h2>
+                        <button type="button" id="ajouter-intervenant" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i> Ajouter un intervenant
+                        </button>
+                    </div>
+                    <div id="intervenants-container">
+                        <!-- Les intervenants seront ajoutés ici dynamiquement -->
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-cog"></i> Configuration API</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="api_url">URL de l'API</label>
+                            <input type="url" id="api_url" value="http://localhost:3000/api/emargement" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="api_key">Clé API</label>
+                            <input type="password" id="api_key" placeholder="Votre clé API" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="button" id="generer-pdf" class="btn btn-primary">
+                        <i class="fas fa-file-pdf"></i> Générer le PDF
+                    </button>
+                    <button type="button" id="test-api" class="btn btn-secondary">
+                        <i class="fas fa-vial"></i> Test API
+                    </button>
+                    <button type="button" id="exporter-json" class="btn btn-outline">
+                        <i class="fas fa-download"></i> Exporter JSON
+                    </button>
+                </div>
+            </div>
+
+            <div class="preview-container">
+                <h2><i class="fas fa-eye"></i> Aperçu JSON</h2>
+                <div class="json-preview">
+                    <pre id="json-preview"></pre>
+                </div>
+            </div>
+        </main>
+
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>Génération du PDF en cours...</p>
+            </div>
+        </div>
+
+        <div id="notification" class="notification hidden">
+            <div class="notification-content">
+                <i class="notification-icon"></i>
+                <span class="notification-message"></span>
+                <button class="notification-close">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,415 @@
+import React, { useState } from 'react';
+import Header from './components/Header';
+import Button from './components/Button';
+import { useFormState } from './hooks/useLocalStorage';
+import { Notification as NotificationType } from './types';
+import ApiService from './services/api';
+import './App.css';
+
+const App: React.FC = () => {
+  const [formState, setFormState] = useFormState();
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiService] = useState(() => new ApiService(formState.apiConfig));
+
+  const addNotification = (notification: Omit<NotificationType, 'id'>) => {
+    const id = Date.now().toString();
+    const newNotification = { ...notification, id };
+    setNotifications(prev => [...prev, newNotification]);
+    
+    // Auto-remove notification after duration
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, notification.duration || 5000);
+  };
+
+  const updateParticipant = (field: string, value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      participant: {
+        ...prev.participant,
+        [field]: value
+      }
+    }));
+  };
+
+  const updateApiConfig = (field: string, value: string) => {
+    const newConfig = {
+      ...formState.apiConfig,
+      [field]: value
+    };
+    setFormState(prev => ({
+      ...prev,
+      apiConfig: newConfig
+    }));
+    apiService.updateConfig(newConfig);
+  };
+
+  const addIntervenant = () => {
+    const newIntervenant = {
+      id: Date.now(),
+      nom: '',
+      prenom: '',
+      signature_matin: '',
+      signature_soir: ''
+    };
+    setFormState(prev => ({
+      ...prev,
+      intervenants: [...prev.intervenants, newIntervenant]
+    }));
+  };
+
+  const updateIntervenant = (id: number, field: string, value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      intervenants: prev.intervenants.map(i =>
+        i.id === id ? { ...i, [field]: value } : i
+      )
+    }));
+  };
+
+  const removeIntervenant = (id: number) => {
+    setFormState(prev => ({
+      ...prev,
+      intervenants: prev.intervenants.filter(i => i.id !== id)
+    }));
+  };
+
+  const generatePdf = async () => {
+    setIsLoading(true);
+    try {
+      const data = {
+        participant: formState.participant,
+        intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
+      };
+      
+      const blob = await apiService.generatePdf(data);
+      downloadFile(blob, `emargement_${new Date().toISOString().slice(0, 10)}.pdf`);
+      addNotification({
+        type: 'success',
+        message: 'PDF généré avec succès !'
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        message: `Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testApi = async () => {
+    setIsLoading(true);
+    try {
+      const blob = await apiService.testApi();
+      downloadFile(blob, 'test_emargement.pdf');
+      addNotification({
+        type: 'success',
+        message: 'Test API réussi !'
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        message: `Erreur de test: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const exportJson = () => {
+    const data = {
+      participant: formState.participant,
+      intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    downloadFile(blob, `emargement_${new Date().toISOString().slice(0, 10)}.json`);
+    
+    addNotification({
+      type: 'success',
+      message: 'JSON exporté avec succès !'
+    });
+  };
+
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="container">
+      <Header />
+      
+      <main className="main-content">
+        <div className="form-container">
+          <div className="form-section">
+            <h2><i className="fas fa-user"></i> Informations du Participant</h2>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="nom">Nom *</label>
+                <input
+                  type="text"
+                  id="nom"
+                  value={formState.participant.nom}
+                  onChange={(e) => updateParticipant('nom', e.target.value)}
+                  placeholder="Nom du participant"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="prenom">Prénom *</label>
+                <input
+                  type="text"
+                  id="prenom"
+                  value={formState.participant.prenom}
+                  onChange={(e) => updateParticipant('prenom', e.target.value)}
+                  placeholder="Prénom du participant"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="code_session">Code Session *</label>
+                <input
+                  type="text"
+                  id="code_session"
+                  value={formState.participant.code_session}
+                  onChange={(e) => updateParticipant('code_session', e.target.value)}
+                  placeholder="Ex: SESS-2025-001"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="date_cours">Date du Cours *</label>
+                <input
+                  type="date"
+                  id="date_cours"
+                  value={formState.participant.date_du_cours}
+                  onChange={(e) => updateParticipant('date_du_cours', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="nom_formation">Nom de la Formation *</label>
+                <input
+                  type="text"
+                  id="nom_formation"
+                  value={formState.participant.nom_formation}
+                  onChange={(e) => updateParticipant('nom_formation', e.target.value)}
+                  placeholder="Ex: Formation Développement Web"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="nom_cours">Nom du Cours *</label>
+                <input
+                  type="text"
+                  id="nom_cours"
+                  value={formState.participant.nom_du_cours}
+                  onChange={(e) => updateParticipant('nom_du_cours', e.target.value)}
+                  placeholder="Ex: JavaScript Avancé"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="signature_matin">Signature Matin (URL)</label>
+                <input
+                  type="url"
+                  id="signature_matin"
+                  value={formState.participant.signature_matin}
+                  onChange={(e) => updateParticipant('signature_matin', e.target.value)}
+                  placeholder="https://example.com/signature1.png"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="signature_soir">Signature Soir (URL)</label>
+                <input
+                  type="url"
+                  id="signature_soir"
+                  value={formState.participant.signature_soir}
+                  onChange={(e) => updateParticipant('signature_soir', e.target.value)}
+                  placeholder="https://example.com/signature2.png"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <div className="section-header">
+              <h2><i className="fas fa-users"></i> Intervenants</h2>
+              <Button onClick={addIntervenant} variant="secondary" icon="fas fa-plus">
+                Ajouter un intervenant
+              </Button>
+            </div>
+            <div id="intervenants-container">
+              {formState.intervenants.length === 0 ? (
+                <div className="empty-state">
+                  <p>Aucun intervenant ajouté. Cliquez sur "Ajouter un intervenant" pour commencer.</p>
+                </div>
+              ) : (
+                formState.intervenants.map((intervenant) => (
+                  <div key={intervenant.id} className="intervenant-card">
+                    <div className="intervenant-header">
+                      <span className="intervenant-title">Intervenant {intervenant.id}</span>
+                      <button
+                        type="button"
+                        className="btn-remove"
+                        onClick={() => removeIntervenant(intervenant.id)}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Nom</label>
+                        <input
+                          type="text"
+                          placeholder="Nom de l'intervenant"
+                          value={intervenant.nom}
+                          onChange={(e) => updateIntervenant(intervenant.id, 'nom', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Prénom</label>
+                        <input
+                          type="text"
+                          placeholder="Prénom de l'intervenant"
+                          value={intervenant.prenom}
+                          onChange={(e) => updateIntervenant(intervenant.id, 'prenom', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Signature Matin (URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/signature.png"
+                          value={intervenant.signature_matin}
+                          onChange={(e) => updateIntervenant(intervenant.id, 'signature_matin', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Signature Soir (URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/signature.png"
+                          value={intervenant.signature_soir}
+                          onChange={(e) => updateIntervenant(intervenant.id, 'signature_soir', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h2><i className="fas fa-cog"></i> Configuration API</h2>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="api_url">URL de l'API</label>
+                <input
+                  type="url"
+                  id="api_url"
+                  value={formState.apiConfig.url}
+                  onChange={(e) => updateApiConfig('url', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="api_key">Clé API</label>
+                <input
+                  type="password"
+                  id="api_key"
+                  value={formState.apiConfig.key}
+                  onChange={(e) => updateApiConfig('key', e.target.value)}
+                  placeholder="Votre clé API"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="actions">
+            <Button
+              onClick={generatePdf}
+              disabled={isLoading}
+              icon="fas fa-file-pdf"
+            >
+              Générer le PDF
+            </Button>
+            
+            <Button
+              onClick={testApi}
+              variant="secondary"
+              disabled={isLoading}
+              icon="fas fa-vial"
+            >
+              Test API
+            </Button>
+            
+            <Button
+              onClick={exportJson}
+              variant="outline"
+              icon="fas fa-download"
+            >
+              Exporter JSON
+            </Button>
+          </div>
+        </div>
+        
+        <div className="preview-container">
+          <h2><i className="fas fa-eye"></i> Aperçu JSON</h2>
+          <div className="json-preview">
+            <pre>
+              {JSON.stringify({
+                participant: formState.participant,
+                intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
+              }, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </main>
+      
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner"></div>
+            <p>Génération du PDF en cours...</p>
+          </div>
+        </div>
+      )}
+      
+      {notifications.map(notification => (
+        <div key={notification.id} className={`notification ${notification.type}`}>
+          <div className="notification-content">
+            <i className={`notification-icon fas fa-${
+              notification.type === 'success' ? 'check-circle' :
+              notification.type === 'error' ? 'exclamation-circle' :
+              notification.type === 'warning' ? 'exclamation-triangle' : 'info-circle'
+            }`}></i>
+            <span className="notification-message">{notification.message}</span>
+            <button
+              className="notification-close"
+              onClick={() => setNotifications(prev => 
+                prev.filter(n => n.id !== notification.id)
+              )}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default App; 

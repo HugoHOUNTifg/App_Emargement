@@ -1,3 +1,27 @@
+/**
+ * ==========================================
+ * APPLICATION D'ÉMARGEMENT - SERVEUR PRINCIPAL
+ * ==========================================
+ * 
+ * Ce serveur Express.js génère des feuilles d'émargement au format PDF
+ * à partir de données JSON. Il inclut :
+ * 
+ * - Authentification par clé API
+ * - Validation des données d'entrée
+ * - Génération de PDF avec PDFKit
+ * - Téléchargement d'images de signature depuis des URLs externes
+ * - Interface web React intégrée
+ * - Sécurité avec Helmet.js et rate limiting
+ * 
+ * MODIFICATIONS RÉCENTES (2025) :
+ * - Ajout du téléchargement d'images de signature depuis des URLs externes
+ * - Configuration CORS élargie pour permettre les accès réseau
+ * - Gestion d'erreurs améliorée pour les téléchargements d'images
+ * - Support des signatures pour les participants et intervenants
+ * 
+ * ==========================================
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -36,6 +60,16 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+/**
+ * Configuration CORS élargie pour permettre les accès réseau
+ * 
+ * Cette configuration permet :
+ * - Toutes les origines (*) pour le développement
+ * - Les méthodes GET, POST, OPTIONS
+ * - Les en-têtes Content-Type, x-api-key, Authorization
+ * 
+ * ATTENTION : En production, restreindre l'origine à des domaines spécifiques
+ */
 app.use(cors({
   origin: '*', // Permettre toutes les origines
   credentials: true,
@@ -115,13 +149,24 @@ const isValidUrl = (string) => {
   }
 };
 
-// Fonction pour télécharger les images de signature
+/**
+ * Fonction pour télécharger les images de signature depuis des URLs externes
+ * 
+ * Cette fonction :
+ * - Télécharge les images depuis des URLs HTTP/HTTPS
+ * - Gère les timeouts (10 secondes)
+ * - Utilise un User-Agent pour éviter les blocages
+ * - Retourne null en cas d'erreur (pour afficher un placeholder)
+ * 
+ * @param {string} url - URL de l'image à télécharger
+ * @returns {Buffer|null} - Buffer de l'image ou null si erreur
+ */
 async function downloadImage(url) {
   try {
     const axios = require('axios');
     const response = await axios.get(url, {
       responseType: 'arraybuffer',
-      timeout: 10000,
+      timeout: 10000, // 10 secondes de timeout
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
@@ -129,7 +174,7 @@ async function downloadImage(url) {
     return response.data;
   } catch (error) {
     console.warn(`Impossible de télécharger l'image: ${url}`, error.message);
-    return null;
+    return null; // Retourne null pour afficher un placeholder
   }
 }
 
@@ -147,7 +192,19 @@ const verifyApiKey = (req, res, next) => {
   next();
 };
 
-// Fonction pour générer la feuille d'émargement
+/**
+ * Fonction principale pour générer la feuille d'émargement au format PDF
+ * 
+ * Cette fonction :
+ * - Crée un document PDF avec PDFKit
+ * - Inclut les informations de formation
+ * - Génère un tableau des participants et intervenants
+ * - Télécharge et insère les images de signature depuis des URLs
+ * - Gère les erreurs de téléchargement avec des placeholders
+ * 
+ * @param {Object} data - Données contenant participant et intervenants
+ * @returns {Promise<Buffer>} - Buffer du PDF généré
+ */
 async function generateEmargementPDF(data) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -210,37 +267,40 @@ async function generateEmargementPDF(data) {
       doc.text(data.participant.nom, 50, currentY);
       doc.text(data.participant.prenom, 150, currentY);
       
-      // Gestion des signatures du participant
+      // Gestion des signatures du participant - Matin
+      // Télécharge et insère l'image de signature ou affiche un placeholder
       if (data.participant.signature_matin) {
         try {
           const imageBuffer = await downloadImage(data.participant.signature_matin);
           if (imageBuffer) {
             doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
           } else {
-            doc.rect(250, currentY - 5, 80, 20).stroke();
+            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
           }
         } catch (error) {
           console.warn('Erreur lors du téléchargement de la signature matin:', error.message);
-          doc.rect(250, currentY - 5, 80, 20).stroke();
+          doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
         }
       } else {
-        doc.rect(250, currentY - 5, 80, 20).stroke();
+        doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
       }
       
+      // Gestion des signatures du participant - Soir
+      // Télécharge et insère l'image de signature ou affiche un placeholder
       if (data.participant.signature_soir) {
         try {
           const imageBuffer = await downloadImage(data.participant.signature_soir);
           if (imageBuffer) {
             doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
           } else {
-            doc.rect(350, currentY - 5, 80, 20).stroke();
+            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
           }
         } catch (error) {
           console.warn('Erreur lors du téléchargement de la signature soir:', error.message);
-          doc.rect(350, currentY - 5, 80, 20).stroke();
+          doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
         }
       } else {
-        doc.rect(350, currentY - 5, 80, 20).stroke();
+        doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
       }
       
       // Intervenants
@@ -251,37 +311,40 @@ async function generateEmargementPDF(data) {
           doc.text(intervenant.nom, 50, currentY);
           doc.text(intervenant.prenom, 150, currentY);
           
-          // Gestion des signatures des intervenants
+          // Gestion des signatures des intervenants - Matin
+          // Télécharge et insère l'image de signature ou affiche un placeholder
           if (intervenant.signature_matin) {
             try {
               const imageBuffer = await downloadImage(intervenant.signature_matin);
               if (imageBuffer) {
                 doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
               } else {
-                doc.rect(250, currentY - 5, 80, 20).stroke();
+                doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
               }
             } catch (error) {
               console.warn(`Erreur lors du téléchargement de la signature matin de l'intervenant ${i + 1}:`, error.message);
-              doc.rect(250, currentY - 5, 80, 20).stroke();
+              doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
             }
           } else {
-            doc.rect(250, currentY - 5, 80, 20).stroke();
+            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
           }
           
+          // Gestion des signatures des intervenants - Soir
+          // Télécharge et insère l'image de signature ou affiche un placeholder
           if (intervenant.signature_soir) {
             try {
               const imageBuffer = await downloadImage(intervenant.signature_soir);
               if (imageBuffer) {
                 doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
               } else {
-                doc.rect(350, currentY - 5, 80, 20).stroke();
+                doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
               }
             } catch (error) {
               console.warn(`Erreur lors du téléchargement de la signature soir de l'intervenant ${i + 1}:`, error.message);
-              doc.rect(350, currentY - 5, 80, 20).stroke();
+              doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
             }
           } else {
-            doc.rect(350, currentY - 5, 80, 20).stroke();
+            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'URL
           }
         }
       }

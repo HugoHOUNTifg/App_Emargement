@@ -26,14 +26,27 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const PDFDocument = require('pdfkit');
+const ejs = require('ejs');
+const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0'; // Expose sur toutes les interfaces pour Codespaces
+// Pour un usage local uniquement, on écoute sur localhost par défaut
+const HOST = process.env.HOST || 'localhost';
+
+// Journalisation des erreurs globales (pour voir tous les bugs dans la console)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
 
 // Configuration de sécurité
 const limiter = rateLimit({
@@ -68,6 +81,8 @@ if (process.env.NODE_ENV === 'production') {
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   }));
+  // Logger HTTP verbeux en dev
+  app.use(morgan('dev'));
 }
 
 /**
@@ -310,159 +325,39 @@ const verifyApiKey = (req, res, next) => {
  * @returns {Promise<Buffer>} - Buffer du PDF généré
  */
 async function generateEmargementPDF(data) {
-  return new Promise(async (resolve, reject) => {
+  // Rendu HTML avec EJS + conversion PDF via Puppeteer
+  const templatePath = path.join(__dirname, 'templates', 'emargement.ejs');
+
+  // Préparer les logos en data URI pour éviter les soucis de chemins
+  const logosBase = path.join(__dirname, 'src', 'logos');
+  const toDataUri = (absPath, mime) => {
     try {
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: {
-          top: 50,
-          bottom: 50,
-          left: 50,
-          right: 50
-        }
-      });
-
-      const chunks = [];
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-
-      // En-tête
-      doc.fontSize(20).font('Helvetica-Bold').text('FEUILLE D\'ÉMARGEMENT', { align: 'center' });
-      doc.moveDown(0.5);
-      
-      // Informations de la formation
-      doc.fontSize(12).font('Helvetica-Bold').text('FORMATION:', 50, 100);
-      doc.fontSize(12).font('Helvetica').text(data.participant.nom_formation, 150, 100);
-      doc.moveDown(0.5);
-      
-      doc.fontSize(12).font('Helvetica-Bold').text('COURS:', 50);
-      doc.fontSize(12).font('Helvetica').text(data.participant.nom_du_cours);
-      doc.moveDown(0.5);
-      
-      doc.fontSize(12).font('Helvetica-Bold').text('DATE:', 50);
-      doc.fontSize(12).font('Helvetica').text(data.participant.date_du_cours);
-      doc.moveDown(0.5);
-      
-      doc.fontSize(12).font('Helvetica-Bold').text('CODE SESSION:', 50);
-      doc.fontSize(12).font('Helvetica').text(data.participant.code_session);
-      doc.moveDown(1);
-
-      // Tableau des participants
-      doc.fontSize(14).font('Helvetica-Bold').text('PARTICIPANTS', { align: 'center' });
-      doc.moveDown(0.5);
-
-      // En-têtes du tableau
-      const startY = doc.y;
-      const colWidth = 100;
-      const rowHeight = 30;
-      
-      doc.fontSize(10).font('Helvetica-Bold');
-      doc.text('Nom', 50, startY);
-      doc.text('Prénom', 150, startY);
-      doc.text('Signature Matin', 250, startY);
-      doc.text('Signature Soir', 350, startY);
-      
-      // Ligne de séparation
-      doc.moveTo(50, startY + 20).lineTo(450, startY + 20).stroke();
-      
-      // Participant principal
-      let currentY = startY + 25;
-      doc.fontSize(10).font('Helvetica');
-      doc.text(data.participant.nom, 50, currentY);
-      doc.text(data.participant.prenom, 150, currentY);
-      
-      // Gestion des signatures du participant - Matin
-      // Récupère et insère l'image de signature ou affiche un placeholder
-      if (data.participant.signature_matin) {
-        try {
-          const imageBuffer = await getImageData(data.participant.signature_matin);
-          if (imageBuffer) {
-            doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
-          } else {
-            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
-          }
-        } catch (error) {
-          console.warn('Erreur lors de la récupération de la signature matin:', error.message);
-          doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
-        }
-      } else {
-        doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
-      }
-      
-      // Gestion des signatures du participant - Soir
-      // Récupère et insère l'image de signature ou affiche un placeholder
-      if (data.participant.signature_soir) {
-        try {
-          const imageBuffer = await getImageData(data.participant.signature_soir);
-          if (imageBuffer) {
-            doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
-          } else {
-            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
-          }
-        } catch (error) {
-          console.warn('Erreur lors de la récupération de la signature soir:', error.message);
-          doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
-        }
-      } else {
-        doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
-      }
-      
-      // Intervenants
-      if (data.intervenants && data.intervenants.length > 0) {
-        for (let i = 0; i < data.intervenants.length; i++) {
-          const intervenant = data.intervenants[i];
-          currentY += rowHeight;
-          doc.text(intervenant.nom, 50, currentY);
-          doc.text(intervenant.prenom, 150, currentY);
-          
-          // Gestion des signatures des intervenants - Matin
-          // Récupère et insère l'image de signature ou affiche un placeholder
-          if (intervenant.signature_matin) {
-            try {
-              const imageBuffer = await getImageData(intervenant.signature_matin);
-              if (imageBuffer) {
-                doc.image(imageBuffer, 250, currentY - 5, { width: 80, height: 20 });
-              } else {
-                doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si échec
-              }
-            } catch (error) {
-              console.warn(`Erreur lors de la récupération de la signature matin de l'intervenant ${i + 1}:`, error.message);
-              doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
-            }
-          } else {
-            doc.rect(250, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
-          }
-          
-          // Gestion des signatures des intervenants - Soir
-          // Récupère et insère l'image de signature ou affiche un placeholder
-          if (intervenant.signature_soir) {
-            try {
-              const imageBuffer = await getImageData(intervenant.signature_soir);
-              if (imageBuffer) {
-                doc.image(imageBuffer, 350, currentY - 5, { width: 80, height: 20 });
-              } else {
-                doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si échec
-              }
-            } catch (error) {
-              console.warn(`Erreur lors de la récupération de la signature soir de l'intervenant ${i + 1}:`, error.message);
-              doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder en cas d'erreur
-            }
-          } else {
-            doc.rect(350, currentY - 5, 80, 20).stroke(); // Placeholder si pas d'image
-          }
-        }
-      }
-
-      // Pied de page
-      doc.moveDown(2);
-      doc.fontSize(10).font('Helvetica').text('Document généré automatiquement', { align: 'center' });
-      doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, { align: 'center' });
-
-      doc.end();
-    } catch (error) {
-      reject(error);
+      const buf = fs.readFileSync(absPath);
+      return `data:${mime};base64,${buf.toString('base64')}`;
+    } catch (e) {
+      console.warn('Logo introuvable:', absPath, e.message);
+      return '';
     }
+  };
+  const logos = {
+    ifg: toDataUri(path.join(logosBase, 'ifg.webp'), 'image/webp'),
+    omnes: toDataUri(path.join(logosBase, 'Logo_Omnes_Éducation.svg.png'), 'image/png'),
+    fonds: toDataUri(path.join(logosBase, 'logo_fond_paritaire.jpg'), 'image/jpeg'),
+    fse: toDataUri(path.join(logosBase, 'Logo-LEurope-sengage-en-France-FSE.png'), 'image/png'),
+  };
+
+  const html = await ejs.renderFile(templatePath, { data, logos }, { async: true });
+
+  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
   });
+  await browser.close();
+  return pdfBuffer;
 }
 
 // Route principale pour générer l'émargement
@@ -567,9 +462,11 @@ app.get('*', (req, res) => {
 // Gestion des erreurs
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  const isDev = process.env.NODE_ENV !== 'production';
   res.status(500).json({
     error: 'Erreur interne du serveur',
-    message: 'Une erreur inattendue s\'est produite'
+    message: isDev ? err.message : 'Une erreur inattendue s\'est produite',
+    stack: isDev ? err.stack : undefined
   });
 });
 

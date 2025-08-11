@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feuille d'Émargement</title>
+  <style>
+    @page { size: A4; margin: 20mm 15mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; }
+    h1 { text-align: center; margin: 0 0 12px; font-size: 22px; letter-spacing: 1px; }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      grid-row-gap: 6px;
+      grid-column-gap: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .meta .label { font-weight: bold; }
+
+    .section-title { text-align: center; font-size: 16px; font-weight: bold; margin: 10px 0; }
+    .seg-title { text-align: center; font-size: 14px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px; }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th { font-size: 11px; text-align: left; border-bottom: 1px solid #333; padding: 6px 4px; }
+    tbody td { padding: 10px 4px; vertical-align: middle; }
+    tbody tr + tr td { border-top: 1px solid #bbb; }
+
+    /* Colonnes fixes pour éviter les débordements (plus d'espace pour les signatures) */
+    .col-nom { width: 20%; }
+    .col-prenom { width: 20%; }
+    .col-sig { width: 30%; }
+
+    .cell-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Signatures agrandies: largeur cible ~5.6 cm (≈160pt), hauteur max 90pt, centrées */
+    .sig-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 90pt;
+      padding: 8pt 0;
+    }
+    .sig-container img {
+      max-width: 160pt;
+      max-height: 90pt;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+    .placeholder {
+      width: 160pt; height: 90pt; border: 1px dashed #999; box-sizing: border-box;
+    }
+
+    .footer {
+      position: fixed; left: 0; right: 0; bottom: 0; font-size: 10px; text-align: center; color: #444;
+    }
+
+     /* Attestation sous-titre */
+     .attestation { text-align: center; font-size: 12px; margin: 6px 0 14px; font-style: italic; }
+
+     /* Bloc mentions légales en bas de page */
+     .legal {
+       position: fixed; left: 0; right: 0; bottom: 0;
+       padding: 6pt 10pt;
+       font-size: 8pt; line-height: 1.3; color: #444; text-align: center;
+       background: transparent;
+     }
+     .legal .title { font-weight: 700; margin-bottom: 4pt; }
+     .legal a { color: #1d4ed8; text-decoration: none; }
+  </style>
+  </head>
+  <body>
+  <!-- Bandeau logos (de droite vers la gauche) -->
+  <div style="display:flex; justify-content:flex-start; align-items:center; gap:14pt; margin-bottom:8pt;">
+    <% if (typeof logos !== 'undefined') { %>
+      <img src="<%= logos.ifg %>" alt="IFG" style="height:28pt; object-fit:contain;" />
+      <img src="<%= logos.omnes %>" alt="Omnes" style="height:28pt; object-fit:contain;" />
+      <!-- Ces deux logos comportent des marges blanches importantes; on augmente la hauteur pour un rendu visuel équivalent -->
+      <img src="<%= logos.fonds %>" alt="Fonds paritaire" style="height:55pt; object-fit:contain;" />
+      <img src="<%= logos.fse %>" alt="FSE" style="height:75pt; object-fit:contain;" />
+    <% } %>
+  </div>
+
+  <h1>FEUILLE D'ÉMARGEMENT</h1>
+  <p class="attestation">Nous IFG - attestons par la présente de la réalité des informations portées ci-dessous à votre connaissance.</p>
+
+  <div class="meta">
+    <div class="label">FORMATION:</div><div><%= data.participant.nom_formation %></div>
+    <div class="label">COURS:</div><div><%= data.participant.nom_du_cours %></div>
+    <div class="label">DATE:</div><div><%= data.participant.date_du_cours %></div>
+    <div class="label">CODE SESSION:</div><div><%= data.participant.code_session %></div>
+  </div>
+
+  <div class="seg-title">APPRENANT</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-nom">Nom</th>
+        <th class="col-prenom">Prénom</th>
+        <th class="col-sig">Signature Matin</th>
+        <th class="col-sig">Signature Soir</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cell-text"><%= data.participant.nom %></td>
+        <td class="cell-text"><%= data.participant.prenom %></td>
+        <td>
+          <div class="sig-container">
+            <% if (data.participant.signature_matin) { %>
+              <img src="<%= data.participant.signature_matin %>" />
+            <% } else { %>
+              <div class="placeholder"></div>
+            <% } %>
+          </div>
+        </td>
+        <td>
+          <div class="sig-container">
+            <% if (data.participant.signature_soir) { %>
+              <img src="<%= data.participant.signature_soir %>" />
+            <% } else { %>
+              <div class="placeholder"></div>
+            <% } %>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <% if (Array.isArray(data.intervenants) && data.intervenants.length > 0) { %>
+    <div class="seg-title" style="margin-top: 14px;">INTERVENANT</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-nom">Nom</th>
+          <th class="col-prenom">Prénom</th>
+          <th class="col-sig">Signature Matin</th>
+          <th class="col-sig">Signature Soir</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.intervenants.forEach(function(intervenant) { %>
+          <tr>
+            <td class="cell-text"><%= intervenant.nom %></td>
+            <td class="cell-text"><%= intervenant.prenom %></td>
+            <td>
+              <div class="sig-container">
+                <% if (intervenant.signature_matin) { %>
+                  <img src="<%= intervenant.signature_matin %>" />
+                <% } else { %>
+                  <div class="placeholder"></div>
+                <% } %>
+              </div>
+            </td>
+            <td>
+              <div class="sig-container">
+                <% if (intervenant.signature_soir) { %>
+                  <img src="<%= intervenant.signature_soir %>" />
+                <% } else { %>
+                  <div class="placeholder"></div>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+
+  <!-- Bloc mentions légales en bas de page -->
+  <div class="legal">
+    <div class="title">IFG - Institut Français de Gestion</div>
+    <div>SAS au capital de 12 015 156 € dont le siège social est situé 43 Quai de Grenelle 75015 Paris, inscrite au Registre duCommerce et des Sociétés de Paris sous le numéro 432 197 762, Organisme de Formation enregistré sous le numérod’activité 11753396275 auprès du préfet de région d’Ile-de-France, cet enregistrement ne vaut pas agrément de l’État</div>
+    <div style="margin-top:6pt;">Code APE : 8532Z - N° TVA intracommunautaire FR21432197762 - Tél. : 09 70 15 57 00 - <a href="mailto:myifg@groupe-ifg.fr">myifg@groupe-ifg.fr</a> - <a href="https://www.ifgexecutive.com">www.ifgexecutive.com</a></div>
+  </div>
+  </body>
+  </html>
+
+

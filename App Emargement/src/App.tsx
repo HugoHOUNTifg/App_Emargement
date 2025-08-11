@@ -11,6 +11,8 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiService] = useState(() => new ApiService(formState.apiConfig));
+  const [activeStep, setActiveStep] = useState<number>(1);
+  const [showJsonPreview, setShowJsonPreview] = useState<boolean>(false);
   const [signatureFormats, setSignatureFormats] = useState<{[key: string]: string}>({
     matin: 'url',
     soir: 'url'
@@ -142,13 +144,105 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Helpers de préparation des données pour l'API
+  const toFrenchDate = (value: string): string => {
+    if (!value) return value;
+    // Accepte déjà JJ/MM/AAAA
+    const frRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (frRegex.test(value)) return value;
+    // Convertit YYYY-MM-DD -> DD/MM/YYYY (format des inputs de type=date)
+    const isoRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const m = value.match(isoRegex);
+    if (m) {
+      const [, yyyy, mm, dd] = m;
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    // Dernier recours: tentative de formatage en fr-FR
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('fr-FR');
+    }
+    return value;
+  };
+
+  const buildRequestData = () => {
+    const participant = {
+      ...formState.participant,
+      date_du_cours: toFrenchDate(formState.participant.date_du_cours)
+    };
+    const intervenants = formState.intervenants
+      .map(({ id, ...rest }) => rest)
+      // Garder uniquement les intervenants complets pour éviter un 400 côté serveur
+      .filter(i => (i.nom?.trim() || '') !== '' && (i.prenom?.trim() || '') !== '');
+
+    return { participant, intervenants };
+  };
+
+  // Données allégées pour l'aperçu JSON (masque/tronque les images)
+  const truncateValue = (value: string): string => {
+    if (!value) return value;
+    const isBase64 = value.startsWith('data:image/') || /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value);
+    const isLong = value.length > 80;
+    if (isBase64 || isLong) {
+      const head = value.slice(0, 40);
+      const tail = value.slice(-10);
+      return `${head}...${tail} (len:${value.length})`;
+    }
+    return value;
+  };
+
+  const buildPreviewData = () => {
+    const data = buildRequestData();
+    return {
+      participant: {
+        ...data.participant,
+        signature_matin: truncateValue(data.participant.signature_matin),
+        signature_soir: truncateValue(data.participant.signature_soir),
+      },
+      intervenants: data.intervenants.map(iv => ({
+        ...iv,
+        signature_matin: truncateValue(iv.signature_matin),
+        signature_soir: truncateValue(iv.signature_soir),
+      }))
+    };
+  };
+
+  // Wizard steps
+  const steps = [
+    { id: 1, label: 'Participant' },
+    { id: 2, label: 'Intervenants' },
+    { id: 3, label: 'Détails API' },
+    { id: 4, label: 'Aperçu' }
+  ];
+
+  const isStepCompleted = (stepId: number): boolean => {
+    if (stepId === 1) {
+      const p = formState.participant;
+      return (
+        p.nom.trim() !== '' &&
+        p.prenom.trim() !== '' &&
+        p.code_session.trim() !== '' &&
+        p.date_du_cours.trim() !== '' &&
+        p.nom_formation.trim() !== '' &&
+        p.nom_du_cours.trim() !== ''
+      );
+    }
+    if (stepId === 2) {
+      return formState.intervenants.every(i => (i.nom?.trim() || '') !== '' && (i.prenom?.trim() || '') !== '');
+    }
+    if (stepId === 3) {
+      return formState.apiConfig.url.trim() !== '' && formState.apiConfig.key.trim() !== '';
+    }
+    return false;
+  };
+
+  const nextStep = () => setActiveStep(s => Math.min(s + 1, steps.length));
+  const prevStep = () => setActiveStep(s => Math.max(s - 1, 1));
+
   const generatePdf = async () => {
     setIsLoading(true);
     try {
-      const data = {
-        participant: formState.participant,
-        intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
-      };
+      const data = buildRequestData();
       
       const blob = await apiService.generatePdf(data);
       downloadFile(blob, `emargement_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -186,10 +280,7 @@ const App: React.FC = () => {
   };
 
   const exportJson = () => {
-    const data = {
-      participant: formState.participant,
-      intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
-    };
+    const data = buildRequestData();
     
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -217,7 +308,29 @@ const App: React.FC = () => {
       <Header />
       
       <main className="main-content">
-        <div className="form-container">
+        <div className="wizard-layout">
+          <aside className="wizard-sidebar">
+            <div className="sidebar-brand">
+              <i className="fas fa-cube"></i>
+              <span>Emargement</span>
+            </div>
+            <ul className="wizard-steps">
+              {steps.map(step => (
+                <li
+                  key={step.id}
+                  className={`wizard-step ${activeStep === step.id ? 'active' : ''} ${isStepCompleted(step.id) ? 'completed' : ''}`}
+                  onClick={() => setActiveStep(step.id)}
+                >
+                  <span className="step-icon">{isStepCompleted(step.id) && step.id !== activeStep ? <i className="fas fa-check"></i> : step.id}</span>
+                  <span className="step-label">{step.label}</span>
+                </li>
+              ))}
+            </ul>
+          </aside>
+          <section className="wizard-content">
+            <div className="wizard-card">
+              {activeStep === 1 && (
+                <>
           {/* Section d'aide pour les formats d'image */}
           <div className="help-section">
             <h3><i className="fas fa-info-circle"></i> Formats d'image supportés</h3>
@@ -231,9 +344,10 @@ const App: React.FC = () => {
               </ul>
               <p><strong>Formats d'image supportés :</strong> PNG, JPEG, SVG</p>
             </div>
-          </div>
-          
-          <div className="form-section">
+                </div>
+              
+              
+              <div className="form-section">
             <h2><i className="fas fa-user"></i> Informations du Participant</h2>
             <div className="form-grid">
               <div className="form-group">
@@ -427,9 +541,16 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+              </div>
+              <div className="wizard-nav">
+                <Button variant="primary" onClick={nextStep}>Étape suivante</Button>
+              </div>
+              </>
+              )}
 
-          <div className="form-section">
+              {activeStep === 2 && (
+              <>
+              <div className="form-section">
             <div className="section-header">
               <h2><i className="fas fa-users"></i> Intervenants</h2>
               <Button onClick={addIntervenant} variant="secondary" icon="fas fa-plus">
@@ -603,9 +724,17 @@ const App: React.FC = () => {
                 ))
               )}
             </div>
-          </div>
+              </div>
+              <div className="wizard-nav">
+                <Button variant="outline" onClick={prevStep}>Étape précédente</Button>
+                <Button variant="primary" onClick={nextStep}>Étape suivante</Button>
+              </div>
+              </>
+              )}
 
-          <div className="form-section">
+              {activeStep === 3 && (
+              <>
+              <div className="form-section">
             <h2><i className="fas fa-cog"></i> Configuration API</h2>
             <div className="form-grid">
               <div className="form-group">
@@ -630,48 +759,53 @@ const App: React.FC = () => {
                 />
               </div>
             </div>
-          </div>
+              </div>
+              <div className="wizard-nav">
+                <Button variant="outline" onClick={prevStep}>Étape précédente</Button>
+                <Button variant="primary" onClick={nextStep}>Étape suivante</Button>
+              </div>
+              </>
+              )}
 
-          <div className="actions">
-            <Button
-              onClick={generatePdf}
-              disabled={isLoading}
-              icon="fas fa-file-pdf"
-            >
-              Générer le PDF
-            </Button>
-            
-            <Button
-              onClick={testApi}
-              variant="secondary"
-              disabled={isLoading}
-              icon="fas fa-vial"
-            >
-              Test API
-            </Button>
-            
-            <Button
-              onClick={exportJson}
-              variant="outline"
-              icon="fas fa-download"
-            >
-              Exporter JSON
-            </Button>
-          </div>
-        </div>
-        
-        <div className="preview-container">
-          <h2><i className="fas fa-eye"></i> Aperçu JSON</h2>
-          <div className="json-preview">
-            <pre>
-              {JSON.stringify({
-                participant: formState.participant,
-                intervenants: formState.intervenants.map(({ id, ...rest }) => rest)
-              }, null, 2)}
-            </pre>
-          </div>
+              {activeStep === 4 && (
+              <>
+                <h2><i className="fas fa-eye"></i> Aperçu</h2>
+                <p className="subtitle">Vérifiez vos données puis lancez la génération.</p>
+                <div className="actions">
+                  <Button onClick={() => setShowJsonPreview(true)} variant="outline" icon="fas fa-code">Voir JSON</Button>
+                  <Button onClick={generatePdf} disabled={isLoading} icon="fas fa-file-pdf">Générer le PDF</Button>
+                  <Button onClick={testApi} variant="secondary" disabled={isLoading} icon="fas fa-vial">Test API</Button>
+                  <Button onClick={exportJson} variant="outline" icon="fas fa-download">Exporter JSON</Button>
+                </div>
+                <div className="json-collapsible">
+                  <details>
+                    <summary>Aperçu JSON (réduit)</summary>
+                    <div className="json-preview"><pre>{JSON.stringify(buildPreviewData(), null, 2)}</pre></div>
+                  </details>
+                </div>
+                <div className="wizard-nav">
+                  <Button variant="outline" onClick={prevStep}>Étape précédente</Button>
+                </div>
+              </>
+              )}
+            </div>
+          </section>
         </div>
       </main>
+
+      {showJsonPreview && (
+        <div className="modal-overlay" onClick={() => setShowJsonPreview(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Aperçu JSON</h3>
+              <button className="modal-close" onClick={() => setShowJsonPreview(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <pre>{JSON.stringify(buildPreviewData(), null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      )}
       
       {isLoading && (
         <div className="loading-overlay">

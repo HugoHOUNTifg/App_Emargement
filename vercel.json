@@ -1,5 +1,18 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "App Emargement/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "App Emargement/dist"
+      }
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -9,7 +22,5 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "buildCommand": "cd \"App Emargement\" && npm install && ./node_modules/.bin/vite build --config vite.config.mjs",
-  "outputDirectory": "App Emargement/dist"
+  ]
 }

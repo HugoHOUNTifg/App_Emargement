@@ -20,9 +20,10 @@
 ## Configuration Vercel
 
 Le fichier `vercel.json` configure :
+- **Builds** : 
+  - API serverless avec `@vercel/node`
+  - Frontend React avec `@vercel/static-build`
 - **Routes** : Redirection des requêtes API vers `/api/server.js`
-- **Build** : Compilation du frontend React avec commande personnalisée
-- **Output** : Dossier de sortie `App Emargement/dist/`
 
 Vercel détecte automatiquement :
 - Les fonctions serverless dans `/api/`
@@ -50,17 +51,18 @@ Sur Vercel, configurez ces variables :
 
 ## Résolution des problèmes
 
-### Erreur de permission
-- ✅ Résolu : Utilisation de `./node_modules/.bin/vite` au lieu de `npx vite`
-- ✅ Résolu : Structure sans espaces dans les noms de fichiers
-- ✅ Résolu : Commande de build personnalisée dans `vercel.json`
+### Erreur de permission (RÉSOLU)
+- ✅ **Cause** : `node_modules` commité dans le repository avec des permissions Windows
+- ✅ **Solution** : Suppression de `node_modules` du repository
+- ✅ **Prévention** : `.gitignore` exclut `node_modules/`
+- ✅ **Résultat** : Vercel installe les dépendances avec les bonnes permissions Linux
 
 ### Erreur de nom de fonction
 - ✅ Résolu : Déplacement du serveur dans `/api/server.js`
 - ✅ Résolu : Configuration des routes appropriées
 
 ### Erreur de runtime
-- ✅ Résolu : Suppression de la section `functions` explicite
+- ✅ Résolu : Utilisation des builds automatiques Vercel
 - ✅ Résolu : Vercel détecte automatiquement le runtime Node.js
 
 ## Développement local
@@ -75,3 +77,12 @@ npm run dev
 # Build de production
 npm run build
 ```
+
+## Important : Ne jamais commiter node_modules
+
+⚠️ **IMPORTANT** : Le dossier `node_modules` ne doit JAMAIS être commité dans le repository car :
+- Il contient des binaires avec des permissions spécifiques à l'OS
+- Il cause des erreurs de permission sur Vercel (Linux)
+- Il augmente considérablement la taille du repository
+
+Le `.gitignore` exclut automatiquement `node_modules/` pour éviter ce problème.

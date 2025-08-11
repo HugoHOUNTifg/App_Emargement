@@ -20,10 +20,14 @@
 ## Configuration Vercel
 
 Le fichier `vercel.json` configure :
-- **Functions** : API serverless dans `/api/`
 - **Routes** : Redirection des requêtes API vers `/api/server.js`
-- **Build** : Compilation du frontend React
+- **Build** : Compilation du frontend React avec `npm run build`
 - **Output** : Dossier de sortie `dist/`
+
+Vercel détecte automatiquement :
+- Les fonctions serverless dans `/api/`
+- Le runtime Node.js approprié
+- La structure du projet
 
 ## Variables d'environnement requises
 
@@ -53,6 +57,10 @@ Sur Vercel, configurez ces variables :
 ### Erreur de nom de fonction
 - ✅ Résolu : Déplacement du serveur dans `/api/server.js`
 - ✅ Résolu : Configuration des routes appropriées
+
+### Erreur de runtime
+- ✅ Résolu : Suppression de la section `functions` explicite
+- ✅ Résolu : Vercel détecte automatiquement le runtime Node.js
 
 ## Développement local
 

@@ -10,6 +10,6 @@
       "dest": "/$1"
     }
   ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "buildCommand": "cd \"App Emargement\" && npm install && ./node_modules/.bin/vite build --config vite.config.mjs",
+  "outputDirectory": "App Emargement/dist"
 }

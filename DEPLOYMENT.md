@@ -21,8 +21,8 @@
 
 Le fichier `vercel.json` configure :
 - **Routes** : Redirection des requêtes API vers `/api/server.js`
-- **Build** : Compilation du frontend React avec `npm run build`
-- **Output** : Dossier de sortie `dist/`
+- **Build** : Compilation du frontend React avec commande personnalisée
+- **Output** : Dossier de sortie `App Emargement/dist/`
 
 Vercel détecte automatiquement :
 - Les fonctions serverless dans `/api/`
@@ -51,8 +51,9 @@ Sur Vercel, configurez ces variables :
 ## Résolution des problèmes
 
 ### Erreur de permission
-- ✅ Résolu : Utilisation de `npx vite` au lieu de `vite` directement
+- ✅ Résolu : Utilisation de `./node_modules/.bin/vite` au lieu de `npx vite`
 - ✅ Résolu : Structure sans espaces dans les noms de fichiers
+- ✅ Résolu : Commande de build personnalisée dans `vercel.json`
 
 ### Erreur de nom de fonction
 - ✅ Résolu : Déplacement du serveur dans `/api/server.js`

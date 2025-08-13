@@ -9,7 +9,7 @@
       "src": "App Emargement/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "App Emargement/dist"
+        "distDir": "../dist"
       }
     }
   ],

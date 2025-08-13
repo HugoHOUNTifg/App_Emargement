@@ -9,7 +9,7 @@
       "src": "App-Emargement/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "../dist"
+        "distDir": "dist"
       }
     }
   ],
@@ -17,6 +17,10 @@
     {
       "source": "/api/(.*)",
       "destination": "/api/server.js"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
       "source": "/(.*)",

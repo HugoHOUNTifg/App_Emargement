@@ -12,14 +12,9 @@ export default defineConfig({
     outDir: '../../dist',
     emptyOutDir: true,
     sourcemap: true,
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
-      }
-    }
+    assetsDir: 'assets'
   },
-  base: './',
+  base: '/',
   server: {
     port: 3001,
     host: 'localhost',

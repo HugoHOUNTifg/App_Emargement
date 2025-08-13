@@ -26,6 +26,9 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 }
 
 export function useFormState(): [FormState, (value: FormState | ((val: FormState) => FormState)) => void] {
+  const defaultApiUrl = (typeof window !== 'undefined'
+    ? `${window.location.origin}/api/emargement`
+    : '/api/emargement');
   const initialFormState: FormState = {
     participant: {
       nom: '',
@@ -39,7 +42,7 @@ export function useFormState(): [FormState, (value: FormState | ((val: FormState
     },
     intervenants: [],
     apiConfig: {
-      url: '/api/emargement',
+      url: defaultApiUrl,
       key: 'IFG_EMARGEMENT_2025_SECURE_KEY',
     },
   };

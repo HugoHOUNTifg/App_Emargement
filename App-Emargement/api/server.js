@@ -108,8 +108,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting
 app.use('/api/', limiter);
 
-// Servir les fichiers statiques React
-app.use(express.static('dist'));
+// Servir les fichiers statiques React (dist se trouve un niveau au-dessus de api/)
+app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 // Clé API pour sécuriser l'accès
 const API_KEY = process.env.API_KEY || 'IFG_EMARGEMENT_2025_SECURE_KEY';
@@ -451,12 +451,12 @@ app.post('/api/test', verifyApiKey, async (req, res) => {
 
 // Route pour l'interface web React
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 // Fallback pour les routes React
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 // Gestion des erreurs
@@ -470,11 +470,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Serveur démarré sur ${HOST}:${PORT}`);
-  console.log(`📋 API d'émargement disponible sur http://localhost:${PORT}`);
-  console.log(`🔑 Clé API: ${API_KEY}`);
-  console.log(`🔒 Mode sécurité: ${process.env.NODE_ENV === 'production' ? 'Production' : 'Développement'}`);
-});
+// En environnement serverless (Vercel), pas d'écoute de port
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, HOST, () => {
+    console.log(`🚀 Serveur démarré sur ${HOST}:${PORT}`);
+    console.log(`📋 API d'émargement disponible sur http://localhost:${PORT}`);
+    console.log(`🔑 Clé API: ${API_KEY}`);
+    console.log(`🔒 Mode sécurité: ${process.env.NODE_ENV === 'production' ? 'Production' : 'Développement'}`);
+  });
+}
 
 module.exports = app; 

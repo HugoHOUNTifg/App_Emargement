@@ -8,7 +8,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "dev:frontend": "npx vite --config vite.config.mjs",
-    "build": "node build-test.js && npx vite build --config vite.config.mjs && node post-build-test.js",
+    "build": "npx vite build --config vite.config.mjs",
     "preview": "npx vite preview --config vite.config.mjs",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",

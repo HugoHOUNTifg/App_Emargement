@@ -8,7 +8,7 @@
 │   ├── server.js          # API principale
 │   ├── templates/         # Templates EJS
 │   └── logos/            # Logos pour les PDF
-├── App Emargement/        # Application React
+├── App-Emargement/        # Application React
 │   ├── src/              # Code source React
 │   ├── dist/             # Build de production (généré)
 │   └── package.json      # Dépendances React

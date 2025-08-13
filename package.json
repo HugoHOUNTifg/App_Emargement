@@ -2,10 +2,10 @@
   "name": "app-emargement-root",
   "private": true,
   "scripts": {
-    "install": "npm --prefix \"App Emargement\" install",
-    "build": "npm --prefix \"App Emargement\" run build",
-    "start": "npm --prefix \"App Emargement\" start",
-    "dev": "npm --prefix \"App Emargement\" run dev"
+    "install": "npm --prefix \"App-Emargement\" install",
+    "build": "npm --prefix \"App-Emargement\" run build",
+    "start": "npm --prefix \"App-Emargement\" start",
+    "dev": "npm --prefix \"App-Emargement\" run dev"
   }
 }
 

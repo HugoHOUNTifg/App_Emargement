@@ -360,16 +360,34 @@ async function generateEmargementPDF(data) {
       }
     : { headless: 'new', args: ['--no-sandbox'] };
 
-  const browser = await puppeteer.launch(launchOptions);
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOptions);
+  } catch (e) {
+    console.error('Puppeteer launch failed:', e);
+    throw e;
+  }
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
-  });
-  await browser.close();
-  return pdfBuffer;
+  try {
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+  } catch (e) {
+    console.error('setContent failed:', e);
+    await browser.close();
+    throw e;
+  }
+  try {
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
+    });
+    await browser.close();
+    return pdfBuffer;
+  } catch (e) {
+    console.error('page.pdf failed:', e);
+    await browser.close();
+    throw e;
+  }
 }
 
 // Route principale pour générer l'émargement (compat: /api/emargement et /emargement)

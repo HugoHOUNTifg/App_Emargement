@@ -1,20 +1,14 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "App-Emargement/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/server.js",
-      "use": "@vercel/node"
-    }
+    { "src": "App-Emargement/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    { "src": "App-Emargement/api/[...all].js", "use": "@vercel/node" }
   ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/App-Emargement/api/[...all].js" },
+    { "src": "/assets/(.*)", "dest": "/App-Emargement/dist/assets/$1" },
+    { "src": "/favicon.ico", "dest": "/App-Emargement/dist/favicon.ico" },
+    { "src": "/index.html", "dest": "/App-Emargement/dist/index.html" },
+    { "src": "/(.*)", "dest": "/App-Emargement/dist/index.html" }
   ]
 }

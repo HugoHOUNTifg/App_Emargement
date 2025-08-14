@@ -360,8 +360,8 @@ async function generateEmargementPDF(data) {
   return pdfBuffer;
 }
 
-// Route principale pour générer l'émargement
-app.post('/api/emargement', verifyApiKey, async (req, res) => {
+// Route principale pour générer l'émargement (compat: /api/emargement et /emargement)
+app.post(['/api/emargement', '/emargement'], verifyApiKey, async (req, res) => {
   try {
     const { participant, intervenants } = req.body;
 
@@ -399,8 +399,8 @@ app.post('/api/emargement', verifyApiKey, async (req, res) => {
   }
 });
 
-// Route de test pour vérifier que l'API fonctionne
-app.get('/api/health', (req, res) => {
+// Route de santé (compat: /api/health et /health)
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'OK',
     message: 'API d\'émargement opérationnelle',
@@ -409,8 +409,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Route pour tester la génération avec des données d'exemple
-app.post('/api/test', verifyApiKey, async (req, res) => {
+// Route de test (compat: /api/test et /test)
+app.post(['/api/test', '/test'], verifyApiKey, async (req, res) => {
   try {
     const testData = {
       participant: {

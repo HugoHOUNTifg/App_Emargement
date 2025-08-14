@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "npm --prefix App-Emargement ci",
+  "installCommand": "npm --prefix App-Emargement install",
   "builds": [
     { "src": "App-Emargement/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
     { "src": "App-Emargement/api/[...all].js", "use": "@vercel/node", "config": { "maxDuration": 60, "memory": 1536 } }

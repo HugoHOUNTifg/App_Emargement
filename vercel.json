@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "App-Emargement/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "App-Emargement/api/[...all].js", "use": "@vercel/node" }
+    { "src": "App-Emargement/api/[...all].js", "use": "@vercel/node", "config": { "maxDuration": 60, "memory": 1536 } }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/App-Emargement/api/[...all].js" },

@@ -27,7 +27,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const PDFDocument = require('pdfkit');
 const ejs = require('ejs');
-const puppeteer = require('puppeteer');
+// En local on utilise puppeteer classique, sur Vercel puppeteer-core + chromium
+const isServerless = process.env.VERCEL === '1' || process.env.AWS_REGION;
+const chromium = isServerless ? require('@sparticuz/chromium') : null;
+const puppeteer = isServerless ? require('puppeteer-core') : require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
@@ -348,7 +351,16 @@ async function generateEmargementPDF(data) {
 
   const html = await ejs.renderFile(templatePath, { data, logos }, { async: true });
 
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+  const launchOptions = isServerless
+    ? {
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      }
+    : { headless: 'new', args: ['--no-sandbox'] };
+
+  const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
   const pdfBuffer = await page.pdf({

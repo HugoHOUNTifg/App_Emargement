@@ -30,12 +30,18 @@ import ejs from 'ejs';
 const isServerless = process.env.VERCEL === '1' || process.env.AWS_REGION;
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import axios from 'axios';
 dotenv.config();
 const chromium = isServerless ? (await import('@sparticuz/chromium')).default : null;
 const puppeteer = isServerless ? (await import('puppeteer-core')).default : (await import('puppeteer')).default;
+
+// __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -241,7 +247,6 @@ async function getImageData(imageData) {
   // Si c'est une URL (commence par http:// ou https://)
   if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
     try {
-      const axios = require('axios');
       const response = await axios.get(imageData, {
         responseType: 'arraybuffer',
         timeout: 15000, // 15 secondes de timeout (augmenté)

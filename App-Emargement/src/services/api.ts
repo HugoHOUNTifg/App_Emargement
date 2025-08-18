@@ -1,6 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 import { EmargementData, ApiConfig } from '../types';
 
+/**
+ * ApiService
+ * Couche d'accès réseau du frontend.
+ * - Centralise les appels HTTP vers l'API (/api/*)
+ * - Force le type de réponse (PDF) pour la génération
+ * - Remonte des erreurs lisibles côté UI
+ */
+
 const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
 
 class ApiService {
@@ -10,6 +18,9 @@ class ApiService {
     this.config = config;
   }
 
+  /**
+   * En-têtes minimum requis par l'API
+   */
   private getHeaders(): Record<string, string> {
     return {
       'Content-Type': 'application/json',
@@ -17,6 +28,9 @@ class ApiService {
     };
   }
 
+  /**
+   * POST /api/emargement → retourne un Blob PDF
+   */
   async generatePdf(data: EmargementData): Promise<Blob> {
     try {
       const response: AxiosResponse<Blob> = await axios.post(
@@ -44,6 +58,9 @@ class ApiService {
     }
   }
 
+  /**
+   * POST /api/test → PDF minimal pour valider l'API
+   */
   async testApi(): Promise<Blob> {
     try {
       const testUrl = this.config.url.replace('/emargement', '/test');
@@ -66,6 +83,9 @@ class ApiService {
     }
   }
 
+  /**
+   * GET /api/health → état de santé JSON
+   */
   async checkHealth(): Promise<{ status: string; message: string }> {
     try {
       const healthUrl = this.config.url.replace('/emargement', '/health');
@@ -79,6 +99,9 @@ class ApiService {
     }
   }
 
+  /**
+   * Met à jour dynamiquement l'URL/clé utilisées
+   */
   updateConfig(config: ApiConfig): void {
     this.config = config;
   }

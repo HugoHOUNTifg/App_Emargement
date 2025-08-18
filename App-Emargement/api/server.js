@@ -39,7 +39,7 @@ dotenv.config();
 const chromium = isServerless ? (await import('@sparticuz/chromium')).default : null;
 const puppeteer = isServerless ? (await import('puppeteer-core')).default : (await import('puppeteer')).default;
 
-// __dirname in ESM
+// __dirname en ESM (nécessaire pour accéder à dist/, templates/, logos/)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

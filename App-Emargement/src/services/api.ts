@@ -25,8 +25,16 @@ class ApiService {
         {
           headers: this.getHeaders(),
           responseType: 'blob',
+          validateStatus: (status) => status >= 200 && status < 300,
         }
       );
+      const contentType = (response.headers as any)['content-type'] || '';
+      if (!contentType.includes('application/pdf')) {
+        // Lire le corps texte pour remonter l'erreur
+        const text = await (response.data as any).text?.().catch(() => '')
+          || '[blob non-texte]';
+        throw new Error(`Réponse non-PDF du serveur: ${text.slice(0, 300)}`);
+      }
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

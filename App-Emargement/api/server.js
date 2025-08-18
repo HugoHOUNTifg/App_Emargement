@@ -419,17 +419,20 @@ app.post(['/api/emargement', '/emargement'], verifyApiKey, async (req, res) => {
 
     // Génération du PDF
     const pdfBuffer = await generateEmargementPDF(data);
+    // Normaliser en Buffer Node
+    const nodeBuffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
     // Vérification signature PDF
-    const isPdf = pdfBuffer && pdfBuffer.slice(0, 5).toString() === '%PDF-';
+    const isPdf = nodeBuffer && nodeBuffer.subarray(0, 5).toString('ascii') === '%PDF-';
     if (!isPdf) {
-      console.error('Invalid PDF buffer returned (missing %PDF header). Size:', pdfBuffer?.length);
+      console.error('Invalid PDF buffer returned (missing %PDF header). Size:', nodeBuffer?.length);
       return res.status(500).json({ error: 'PDF invalide', message: 'Le document généré est invalide' });
     }
     // Envoi du PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="emargement.pdf"');
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.status(200).end(pdfBuffer);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Length', nodeBuffer.length);
+    res.status(200).end(nodeBuffer);
 
   } catch (error) {
     console.error('Erreur lors de la génération du PDF:', error);

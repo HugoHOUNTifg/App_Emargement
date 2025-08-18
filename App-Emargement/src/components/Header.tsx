@@ -8,7 +8,7 @@ const Header: React.FC = () => {
         <h1>Générateur de Feuille d'Émargement</h1>
         <p>Créez vos feuilles d'émargement en quelques clics</p>
         <p>
-          <a href="/aide" style={{color:'#fff', textDecoration:'underline'}}>Aide</a>
+          <a href="#/aide" style={{color:'#fff', textDecoration:'underline'}}>Aide</a>
         </p>
       </div>
     </header>

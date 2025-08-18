@@ -22,20 +22,20 @@
  * ==========================================
  */
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const PDFDocument = require('pdfkit');
-const ejs = require('ejs');
-// En local on utilise puppeteer classique, sur Vercel puppeteer-core + chromium
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import PDFDocument from 'pdfkit';
+import ejs from 'ejs';
 const isServerless = process.env.VERCEL === '1' || process.env.AWS_REGION;
-const chromium = isServerless ? require('@sparticuz/chromium') : null;
-const puppeteer = isServerless ? require('puppeteer-core') : require('puppeteer');
-const fs = require('fs');
-const path = require('path');
-const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');
-require('dotenv').config();
+import fs from 'fs';
+import path from 'path';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+dotenv.config();
+const chromium = isServerless ? (await import('@sparticuz/chromium')).default : null;
+const puppeteer = isServerless ? (await import('puppeteer-core')).default : (await import('puppeteer')).default;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -510,4 +510,4 @@ if (process.env.VERCEL !== '1') {
   });
 }
 
-module.exports = app; 
+export default app;

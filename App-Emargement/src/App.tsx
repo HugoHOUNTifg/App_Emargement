@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
+import { Link } from 'react-router-dom';
 import Button from './components/Button';
 import { useFormState } from './hooks/useLocalStorage';
 import { Notification as NotificationType } from './types';
@@ -777,6 +778,7 @@ const App: React.FC = () => {
                   <Button onClick={testApi} variant="secondary" disabled={isLoading} icon="fas fa-vial">Test API</Button>
                   <Button onClick={exportJson} variant="outline" icon="fas fa-download">Exporter JSON</Button>
                 </div>
+                <hr className="section-divider" />
                 <div className="json-collapsible">
                   <details>
                     <summary>Aperçu JSON (réduit)</summary>

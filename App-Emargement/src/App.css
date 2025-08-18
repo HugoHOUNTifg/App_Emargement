@@ -383,6 +383,12 @@
   margin-top: 2rem;
 }
 
+.section-divider {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+}
+
 /* Intervenants */
 .intervenant-card {
   background: #f8fafc;

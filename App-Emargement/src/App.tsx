@@ -304,6 +304,47 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Page Aide simple basée sur le hash (#/aide) via HashRouter
+  const isHelpPage = typeof window !== 'undefined' && window.location.hash.includes('/aide');
+  if (isHelpPage) {
+    return (
+      <div className="container">
+        <Header />
+        <main className="main-content">
+          <div className="wizard-card">
+            <h2>Aide</h2>
+            <p>Utilisez l'endpoint suivant pour générer un PDF:</p>
+            <pre>/api/emargement (POST)</pre>
+            <h3>Headers</h3>
+            <pre>{`Content-Type: application/json\nAccept: application/pdf\nx-api-key: IFG_EMARGEMENT_2025_SECURE_KEY`}</pre>
+            <h3>JSON requis (exemple)</h3>
+            <pre>{`${JSON.stringify({
+  participant: {
+    nom: "Dupont",
+    prenom: "Jean",
+    signature_matin: "", // URL https(s) ou base64 PNG/JPEG/SVG, sinon vide
+    signature_soir: "",
+    code_session: "SESS-2025-001",
+    date_du_cours: "18/08/2025", // DD/MM/YYYY
+    nom_formation: "Développement Web",
+    nom_du_cours: "JavaScript Avancé"
+  },
+  intervenants: [
+    { nom: "Martin", prenom: "Sophie", signature_matin: "", signature_soir: "" }
+  ]
+}, null, 2)}`}</pre>
+            <ul>
+              <li>Date: format DD/MM/YYYY</li>
+              <li>Signatures: PNG/JPEG/SVG en URL ou base64 (WebP non supporté)</li>
+              <li>Clé API par défaut: IFG_EMARGEMENT_2025_SECURE_KEY</li>
+            </ul>
+            <p><a href="#/">Retour</a></p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <Header />
